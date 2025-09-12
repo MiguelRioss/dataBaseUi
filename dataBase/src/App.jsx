@@ -3,7 +3,7 @@ import { onUser, logout, db } from "./firebase";
 import { onValue, ref } from "firebase/database";
 import Orders from "./components/Orders";   // o seu componente de lista
 import Login from "./components/Login";
-import "./app.css";
+import "./App.css";
 
 export default function App() {
   const [user, setUser] = React.useState(null);
