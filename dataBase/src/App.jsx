@@ -1,7 +1,8 @@
+// src/App.jsx
 import React from "react";
 import { onUser, logout, db } from "./firebase";
 import { onValue, ref } from "firebase/database";
-import Orders from "./components/Orders";   // o seu componente de lista
+import Orders from "./components/Orders";
 import Login from "./components/Login";
 import "./App.css";
 
@@ -10,12 +11,13 @@ export default function App() {
   const [checking, setChecking] = React.useState(true);
   const [isAdmin, setIsAdmin] = React.useState(null);
 
+  // Listen to auth user
   React.useEffect(() => {
     const off = onUser((u) => { setUser(u); setChecking(false); });
     return () => off();
   }, []);
 
-  // ler /admins/<uid> (permitido pelas regras, mesmo que ainda não seja admin)
+  // Check admin flag
   React.useEffect(() => {
     if (!user) { setIsAdmin(null); return; }
     const r = ref(db, `admins/${user.uid}`);
@@ -24,13 +26,16 @@ export default function App() {
   }, [user]);
 
   if (checking) return <div className="page">A carregar…</div>;
-  if (!user) return <Login />;
+  if (!user)    return <Login />;
 
   if (isAdmin === false) {
     return (
       <div className="page">
         <div style={{display:"flex",justifyContent:"space-between",marginBottom:12}}>
-          <div><div className="muted">Sessão iniciada:</div><strong>{user.email}</strong></div>
+          <div>
+            <div className="muted">Sessão iniciada:</div>
+            <strong>{user.email}</strong>
+          </div>
           <button className="btn" onClick={logout}>Sair</button>
         </div>
         <h1>Sem autorização</h1>
@@ -44,7 +49,10 @@ export default function App() {
   return (
     <div className="page">
       <div style={{display:"flex",justifyContent:"space-between",marginBottom:12}}>
-        <div><div className="muted">Sessão iniciada:</div><strong>{user.email}</strong></div>
+        <div>
+          <div className="muted">Sessão iniciada:</div>
+          <strong>{user.email}</strong>
+        </div>
         <button className="btn" onClick={logout}>Sair</button>
       </div>
       <Orders />
