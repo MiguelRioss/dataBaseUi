@@ -14,9 +14,6 @@ export default function TrackEditor({ initial = "", onCancel, onSave, saving }) 
 
   async function handleSave() {
     let normalized = (value || "").trim();
-    if (normalized && !/^https?:\/\//i.test(normalized)) {
-      normalized = "https://" + normalized;
-    }
     await onSave(normalized);
   }
 
@@ -26,7 +23,7 @@ export default function TrackEditor({ initial = "", onCancel, onSave, saving }) 
         className="input"
         value={value}
         onChange={handleChange}
-        placeholder="https://…"
+        placeholder="RT..."
         style={{ minWidth: 260 }}
       />
       <button className="btn btn--primary" onClick={handleSave} disabled={saving}>

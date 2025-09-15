@@ -4,7 +4,7 @@ import Badge from "./Badge";
 import { centsToEUR, buildAddress } from "./utils";
 
 /**
- * Single order row. Presentational only - receives callbacks from parent.
+ * Single order row. Presentational only — status is read-only.
  */
 export default function OrderRow({
   row,
@@ -30,6 +30,7 @@ export default function OrderRow({
 
       <td>{centsToEUR(row.amount)}</td>
 
+      {/* Track URL (editable) */}
       <td className="wrap">
         {isEditing ? (
           <TrackEditor
@@ -47,21 +48,21 @@ export default function OrderRow({
         )}
       </td>
 
+      {/* Actions (only for Track URL edit) */}
       <td>
         {!isEditing ? (
-          <button className="btn" onClick={onEdit}>
-            Edit
-          </button>
+          <button className="btn" onClick={onEdit}>Edit</button>
         ) : null}
       </td>
 
-      <td>
-        <Badge ok={row.fulfilled} trueText="Fulfilled" falseText="Pending" />
-      </td>
+      {/* Read-only status booleans */}
+      <td><Badge ok={!!row.accepted}    trueText="Yes" falseText="No" /></td>
+      <td><Badge ok={!!row.in_transit}  trueText="Yes" falseText="No" /></td>
+      <td><Badge ok={!!row.delivered}   trueText="Yes" falseText="No" /></td>
 
-      <td>
-        <Badge ok={row.email_sent} trueText="Sent" falseText="Not sent" />
-      </td>
+      {/* Your older flags */}
+      <td><Badge ok={!!row.fulfilled}   trueText="Yes" falseText="No" /></td>
+      <td><Badge ok={!!row.email_sent}  trueText="Yes" falseText="No" /></td>
     </tr>
   );
 }
