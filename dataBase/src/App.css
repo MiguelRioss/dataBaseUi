@@ -160,3 +160,61 @@ a:hover{ color: var(--accent-2); }
   display:flex; justify-content:flex-end; gap:10px; margin-bottom: 14px;
 }
 .toolbar .email{ color:var(--muted); margin-right:auto; }
+
+/* Database icons grid */
+.db-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  margin-top: 12px;
+  margin-bottom: 6px;
+}
+
+.db-tile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 18px;
+  border-radius: 12px;
+  background: #dbdbdb;
+  border: 1px solid rgba(0,0,0,0.04);
+  cursor: pointer;
+  transition: transform .12s ease, box-shadow .12s ease;
+  min-height: 110px;
+  text-align: left;
+}
+
+.db-tile:focus {
+  outline: 3px solid rgba(21,156,228,0.15);
+  outline-offset: 2px;
+}
+
+.db-tile--active {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+}
+
+.db-tile__icon svg {
+  width: 36px;
+  height: 36px;
+  display: block;
+}
+
+.db-tile__title {
+  font-size: 16px;
+  display: block;
+}
+
+.db-tile__subtitle {
+  font-size: 13px;
+  color: #666;
+  margin-top: 6px;
+}
+
+/* simple card used as placeholder */
+.card {
+  padding: 20px;
+  border-radius: 8px;
+  background: #0c0c0c;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}

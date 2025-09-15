@@ -2,14 +2,18 @@
 import React from "react";
 import { onUser, logout, db } from "./firebase";
 import { onValue, ref } from "firebase/database";
-import Orders from "./components/Orders";
+import Orders from "./components/Orders/Orders";
 import Login from "./components/Login";
+import DataBaseIconsGrid from "./components/DataBaseIconsGrid";
 import "./App.css";
 
 export default function App() {
   const [user, setUser] = React.useState(null);
   const [checking, setChecking] = React.useState(true);
   const [isAdmin, setIsAdmin] = React.useState(null);
+
+  // which admin view is open: 'orders' | 'images'
+  const [selectedView, setSelectedView] = React.useState("orders");
 
   // Listen to auth user
   React.useEffect(() => {
@@ -55,7 +59,27 @@ export default function App() {
         </div>
         <button className="btn" onClick={logout}>Sair</button>
       </div>
-      <Orders />
+
+      {/* Admin hero — using the new component */}
+      <section style={{marginBottom: 24}}>
+        <h2 style={{margin: "0 0 10px 0"}}>Admin</h2>
+        <p className="muted" style={{marginTop:0}}>Escolha uma secção para gerir.</p>
+
+        <DataBaseIconsGrid selected={selectedView} onSelect={setSelectedView} />
+      </section>
+
+      {/* Selected view area */}
+      <div>
+        {selectedView === "orders" && <Orders />}
+
+        {selectedView === "images" && (
+          <div className="card">
+            <h3>Images — coming soon</h3>
+            <p className="muted">Here we'll add the image upload and approval UI. For now it's a placeholder.</p>
+            <button className="btn" disabled style={{opacity:0.6, marginTop:10}}>Upload images (not yet implemented)</button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
