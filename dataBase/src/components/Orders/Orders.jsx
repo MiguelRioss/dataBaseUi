@@ -55,9 +55,7 @@ export default function Orders() {
   const [rows, setRows] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState("");
-  const [bulkLoading, setBulkLoading] = React.useState(false);
-  const [refreshingId, setRefreshingId] = React.useState(null); // ready for per-row
-
+  
   const load = React.useCallback(async () => {
     setError("");
     setLoading(true);
@@ -84,44 +82,8 @@ export default function Orders() {
     load();
   }, [load]);
 
-  // ---- bulk refresh using your server route (/api/track-bulk) ----
-  const refreshAll = async (limit = 3) => {
-    setBulkLoading(true);
-    setError("");
-    try {
-      const result = await api(`/api/track-bulk?limit=${limit}`, {
-        method: "POST",
-      });
-      console.log("[track-bulk] result:", result);
-      await load(); // RTDB will update anyway, but reload to be explicit
-    } catch (e) {
-      console.error("[track-bulk] error:", e);
-      setError(e.message || String(e));
-    } finally {
-      setBulkLoading(false);
-    }
-  };
 
-  // ---- optional: single-row refresh using (/api/update-tracking) ----
-  const refreshOne = async (id) => {
-    setRefreshingId(id);
-    setError("");
-    try {
-      const result = await api(
-        `/api/update-tracking?id=${encodeURIComponent(id)}`,
-        {
-          method: "POST",
-        }
-      );
-      console.log("[update-tracking] result:", result);
-      await load();
-    } catch (e) {
-      console.error("[update-tracking] error:", e);
-      setError(e.message || String(e));
-    } finally {
-      setRefreshingId(null);
-    }
-  };
+
 
   if (loading) return <div className="page">Loading orders…</div>;
   if (!rows.length) return <div className="page">No orders yet.</div>;

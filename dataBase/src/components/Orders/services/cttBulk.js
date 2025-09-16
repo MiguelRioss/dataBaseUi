@@ -30,11 +30,12 @@ export async function checkAllCttFlags({
     const m = haystack && haystack.match(codeRe);
     if (m) codes.add(m[1]);
   }
+  console.log(codes)
 
   // 3) call your /api/ctt/status per code (serial)
   for (const code of codes) {
     try {
-      const r = await fetch(`${BASE}/api/ctt/status?id=${encodeURIComponent(code)}`);
+      const r = await fetch(`${BASE}/api/ctt?id=${encodeURIComponent(code)}`);
       if (!r.ok) throw new Error(`ctt/status HTTP ${r.status}`);
       const data = await r.json(); // { id, label, flags }
       logger(`[CTT] ${code} →`, data.flags, `(${data.label})`);
