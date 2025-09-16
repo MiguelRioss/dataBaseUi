@@ -1,11 +1,14 @@
 // src/components/Orders/Orders.jsx
 import React from "react";
 import OrderRow from "./OrderRow";
+import { checkAllCttFlags } from "./services/cttBulk.js";
+
+// replace your Refresh all (3) button OR add a new one
 import { mapDbToRows } from "./utils";
 
-const API_BASE =
-  (import.meta.env?.VITE_API_BASE_URL || "https://api-new-six.vercel.app")
-    .replace(/\/$/, "");
+const API_BASE = (
+  import.meta.env?.VITE_API_BASE_URL || "https://api-new-six.vercel.app"
+).replace(/\/$/, "");
 
 // tiny fetch helper with JSON + errors
 async function api(path, { method = "GET", body } = {}) {
@@ -37,7 +40,10 @@ async function fetchOrders(params = {}) {
   const res = await fetch(url);
   if (!res.ok) {
     let msg = `HTTP ${res.status}`;
-    try { const j = await res.json(); if (j?.error) msg += `: ${j.error}`; } catch {}
+    try {
+      const j = await res.json();
+      if (j?.error) msg += `: ${j.error}`;
+    } catch {}
     throw new Error(msg);
   }
   const data = await res.json();
@@ -61,7 +67,7 @@ export default function Orders() {
       console.log("[Orders] raw items:", items);
 
       const list = mapDbToRows(
-        Object.fromEntries((items || []).map(o => [o.id, o]))
+        Object.fromEntries((items || []).map((o) => [o.id, o]))
       ).sort((a, b) => (b.date?.getTime?.() ?? 0) - (a.date?.getTime?.() ?? 0));
 
       console.log("[Orders] mapped rows:", list);
@@ -74,14 +80,18 @@ export default function Orders() {
     }
   }, []);
 
-  React.useEffect(() => { load(); }, [load]);
+  React.useEffect(() => {
+    load();
+  }, [load]);
 
   // ---- bulk refresh using your server route (/api/track-bulk) ----
   const refreshAll = async (limit = 3) => {
     setBulkLoading(true);
     setError("");
     try {
-      const result = await api(`/api/track-bulk?limit=${limit}`, { method: "POST" });
+      const result = await api(`/api/track-bulk?limit=${limit}`, {
+        method: "POST",
+      });
       console.log("[track-bulk] result:", result);
       await load(); // RTDB will update anyway, but reload to be explicit
     } catch (e) {
@@ -97,9 +107,12 @@ export default function Orders() {
     setRefreshingId(id);
     setError("");
     try {
-      const result = await api(`/api/update-tracking?id=${encodeURIComponent(id)}`, {
-        method: "POST",
-      });
+      const result = await api(
+        `/api/update-tracking?id=${encodeURIComponent(id)}`,
+        {
+          method: "POST",
+        }
+      );
       console.log("[update-tracking] result:", result);
       await load();
     } catch (e) {
@@ -115,16 +128,21 @@ export default function Orders() {
 
   return (
     <div className="page">
-      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          marginBottom: 12,
+        }}
+      >
         <h1>Orders</h1>
         <div style={{ display: "flex", gap: 8 }}>
           <button
             className="btn"
-            onClick={() => refreshAll(3)} // start small to avoid timeouts
-            disabled={bulkLoading}
-            style={{ background: "#111", color: "#fff" }}
+            onClick={() => checkAllCttFlags({ apiBase: API_BASE, limit: 100 })}
+            style={{ background: "#0a4", color: "#fff" }}
           >
-            {bulkLoading ? "Refreshing…" : "Refresh all (3)"}
+            Check CTT flags (log)
           </button>
         </div>
       </div>
