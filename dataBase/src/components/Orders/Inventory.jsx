@@ -7,7 +7,7 @@ import React from "react";
  * - Still accepts `initial` as fallback/seed
  */
 export default function Inventory({
-  initial = { TOTAL_EXTRACT: 10, ROOT_BARK: 10, TANIA: 10, Lucia: 10, clara: 10 },
+  initial,
   onChange,
   step = 1,
   min = 0,
