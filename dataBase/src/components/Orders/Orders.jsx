@@ -16,7 +16,7 @@ async function fetchOrders(params = {}) {
   if (params.limit) q.set("limit", String(params.limit));
   const url = `${API_BASE}/api/orders${q.toString() ? `?${q}` : ""}`;
 
-  const res = await fetch(//f);
+  const res = await fetch(url);
   if (!res.ok) {
     let msg = `HTTP ${res.status}`;
     try {
