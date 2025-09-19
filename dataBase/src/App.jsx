@@ -6,6 +6,7 @@ import Orders from "./components/Orders/Orders";
 import Login from "./components/Login";
 import DataBaseIconsGrid from "./components/DataBaseIconsGrid";
 import "./App.css";
+import Inventory from "./components/Orders/Inventory";
 
 export default function App() {
   const [user, setUser] = React.useState(null);
@@ -79,6 +80,7 @@ export default function App() {
             <button className="btn" disabled style={{opacity:0.6, marginTop:10}}>Upload images (not yet implemented)</button>
           </div>
         )}
+        {selectedView === "Inventory" && <Inventory />}
       </div>
     </div>
   );
