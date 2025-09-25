@@ -2,7 +2,7 @@ import TrackEditor from "./TrackEditor";
 import Badge from "./Badge";
 import AddressPopup from "./AdressPopUp";
 import StatusPopUp from "./StatusPopUp";
-import { centsToEUR, buildAddress,buildCttUrl } from "./commonFiles/utils";
+import { centsToEUR, buildAddress } from "./commonFiles/utils";
 
 import ProductsPopup from "./ProductsPopup";
 
@@ -56,7 +56,7 @@ export default function OrderRow({
             saving={saving}
           />
         ) : row.track_url ? (
-          <a href={buildCttUrl(row.track_url)} target="_blank" rel="noreferrer">
+          <a href={row.track_url} target="_blank" rel="noreferrer">
             {row.track_url}
           </a>
         ) : (
@@ -88,7 +88,7 @@ export default function OrderRow({
       </td>
       {/* Keep your older flag if needed */}
       <td>
-        <Badge ok={!!row.delivered == true} trueText="Yes" falseText="No" />
+        <Badge ok={!!row.fulfilled} trueText="Yes" falseText="No" />
       </td>
     </tr>
   );

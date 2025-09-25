@@ -53,9 +53,3 @@ export function formatCents(cents = 0, currency = "eur") {
   const amt = (Number(cents) || 0) / 100;
   return new Intl.NumberFormat("en-IE", { style: "currency", currency: currency.toUpperCase() }).format(amt);
 }
-
-
-export  function buildCttUrl(code = "") {
-  const c = encodeURIComponent(code.trim());
-  return `https://appserver.ctt.pt/CustomerArea/PublicArea_Detail?ObjectCodeInput=${c}&SearchInput=${c}&IsFromPublicArea=true`;
-}

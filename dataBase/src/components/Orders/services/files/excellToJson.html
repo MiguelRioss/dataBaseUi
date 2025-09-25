@@ -1,160 +1,136 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>XLS → Orders JSON (event-0 keys)</title>
-<style>
-  body{font-family:ui-sans-serif,system-ui,Segoe UI,Roboto,Arial;margin:0;background:#f6f7fb}
-  .wrap{max-width:960px;margin:40px auto;padding:20px;background:#fff;border:1px solid #e5e7eb;border-radius:12px}
-  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
-  label.file{border:1px dashed #cbd5e1;padding:12px 14px;border-radius:10px;cursor:pointer;background:#f8fafc}
-  input[type=file]{display:none}
-  .btn{appearance:none;border:1px solid #cbd5e1;background:#0ea5e9;color:#fff;padding:10px 14px;border-radius:8px;cursor:pointer;font-weight:600}
-  .btn:hover{filter:brightness(0.98)}
-  .ghost{background:#fff;color:#0f172a;border-color:#cbd5e1}
-  textarea{width:100%;min-height:360px;padding:12px;border:1px solid #e5e7eb;border-radius:10px;font-family:ui-monospace,Consolas,Monaco,monospace}
-  .hint{color:#475569;font-size:13px;margin:6px 0 12px}
-  .err{background:#fef2f2;border:1px solid #fecaca;color:#991b1b;padding:10px 12px;border-radius:10px;margin:10px 0;display:none;white-space:pre-wrap}
-  .err.ok{display:block}
-</style>
-<script src="https://unpkg.com/read-excel-file@5.8.8/bundle/read-excel-file.min.js"></script>
+    <meta charset="UTF-8" />
+    <meta name="viewport" 
+          content="width=device-width, initial-scale=1.0" />
+    <title>Excel to JSON Converter</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+
+        .input-container {
+            margin-bottom: 20px;
+        }
+
+        .input-container input[type="file"] {
+            display: none;
+        }
+
+        .input-container label {
+            display: block;
+            padding: 10px 15px;
+            background-color: #007bff;
+            color: #fff;
+            text-align: center;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+
+        .input-container label:hover {
+            background-color: #0056b3;
+        }
+
+        .btn {
+            padding: 10px 15px;
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .btn:hover {
+            background-color: #0056b3;
+        }
+    </style>
 </head>
+
 <body>
-<div class="wrap">
-  <h2>Excel → Orders JSON</h2>
-  <p class="hint">Each sheet row → one order. Keys are <code>event-0</code>, <code>event-1</code>, …</p>
-  <div class="row">
-    <label class="file">
-      <input type="file" id="excel_file" accept=".xlsx,.xls"/>
-      Choose Excel file…
-    </label>
-    <button class="btn" id="convert_btn">Convert</button>
-    <button class="btn ghost" id="download_btn" disabled>Download JSON</button>
-  </div>
-  <div id="err" class="err"></div>
-  <textarea id="json_data" placeholder="{ your JSON will appear here }"></textarea>
-</div>
+    <div class="container">
+        <div class="input-container">
+            <input type="file" id="excel_file" 
+                   accept=".xlsx, .xls" />
+            <label for="excel_file">
+              Select Excel File
+              </label>
+        </div>
 
-<script>
-const $ = s => document.querySelector(s);
-const errBox = $('#err');
+        <button class="btn" id="convert_btn">
+          Convert to JSON
+          </button>
 
-function showErr(msg){ errBox.textContent=msg; errBox.classList.add('ok'); }
-function clearErr(){ errBox.textContent=''; errBox.classList.remove('ok'); }
+        <div class="input-container">
+            <textarea id="json_data" rows="10" 
+                      cols="50" readonly>
+              </textarea>
+        </div>
 
-function normKey(s){
-  return String(s||'').replace(/^\uFEFF/,'').trim().replace(/\s+/g,'_').toLowerCase();
-}
-const toStr = v => (v==null ? "" : String(v).trim());
-const toISO = v => {
-  if (!v) return new Date().toISOString();
-  if (v instanceof Date) return v.toISOString();
-  const d = new Date(v); return isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
-};
+        <button class="btn" id="download_btn">
+          Download JSON File
+          </button>
+    </div>
 
-// naive country inference from address tail
-function inferCountryFromAddress(addr){
-  if (!addr) return null;
-  const s = addr.trim().toUpperCase();
-  // quick wins by common words (expand as you need)
-  if (/\bPORTUGAL|PT\b/.test(s)) return "PT";
-  if (/\bITALIA|ITALY|IT\b/.test(s)) return "IT";
-  if (/\bFRANCE|FR\b/.test(s)) return "FR";
-  if (/\bSUISSE|SWITZERLAND|CH\b/.test(s)) return "CH";
-  if (/\bUK|UNITED KINGDOM|GRAN BRETA(N|NH)A|GB\b/.test(s)) return "GB";
-  if (/\bCANADA|CA\b/.test(s)) return "CA";
-  return null;
-}
+    <script src=
+"https://unpkg.com/read-excel-file@5.8.8/bundle/read-excel-file.min.js">
+      </script>
 
-// map booleans: "X" → true
-const asX = v => String(v ?? "").trim().toUpperCase() === "X";
+    <script>
+        document
+            .getElementById("convert_btn")
+            .addEventListener("click", function () {
+                const input = document.getElementById("excel_file");
+                readXlsxFile(input.files[0]).then(function (data) {
+                    const headers = data[0];
+                    const jsonData = [];
+                    for (let i = 1; i < data.length; i++) {
+                        const temp = {};
+                        for (let j = 0; j < headers.length; j++) {
+                            temp[headers[j]] = data[i][j];
+                        }
+                        jsonData.push(temp);
+                    }
+                    document.getElementById("json_data")
+                              .value = JSON.stringify(
+                        jsonData,
+                        null,
+                        2
+                    );
+                });
+            });
 
-function keyFor(i){ return `event-${i}`; } // << change here if you want another prefix
+        document
+            .getElementById("download_btn")
+            .addEventListener("click", function () {
+                const jsonData = document.getElementById("json_data").value;
+                downloadObjectAsJson(jsonData, "excel_to_json");
+            });
 
-$('#convert_btn').addEventListener('click', async ()=>{
-  clearErr();
-  const file = $('#excel_file').files?.[0];
-  if (!file){ showErr('Choose an .xlsx first.'); return; }
-
-  try{
-    const rows = await readXlsxFile(file);
-    if (!rows || rows.length < 2){ showErr('No data rows found.'); return; }
-
-    // Build header index
-    const headers = rows[0].map(h => normKey(h));
-    const hi = Object.fromEntries(headers.map((h,i)=>[h,i]));
-
-    // Expected columns (any case/spacing): 
-    // name, phone number, e-mail, adress, sended, received, tracking, paid
-    function at(row, header){ const i = hi[normKey(header)]; return i==null ? undefined : row[i]; }
-
-    const out = {};
-    for (let i=1;i<rows.length;i++){
-      const r = rows[i];
-      if (!r || r.every(v => v==null || v==="")) continue;
-
-      const fullName = toStr(at(r,'Name'));
-      const email    = toStr(at(r,'E-mail'));
-      const phone    = toStr(at(r,'Phone Number'));
-      const address  = toStr(at(r,'Adress'));   // (spelled exactly like your sheet)
-      const sended   = at(r,'Sended');
-      const received = toStr(at(r,'Received'));
-      const tracking = toStr(at(r,'Tracking'));
-      const paid     = toStr(at(r,'Paid'));
-
-      const delivered  = asX(received);
-      const in_transit = !!(tracking && !delivered);
-      const accepted   = !!sended;
-
-      const key = keyFor(i-1);
-
-      out[key] = {
-        address: { country: inferCountryFromAddress(address) },
-        amount_subtotal: null,
-        amount_total: null,
-        currency: "eur",
-        email,
-        email_sent: false,
-        event_id: key,
-        event_type: "manual.import",
-        fulfilled: false,
-        accepted,
-        in_transit,
-        delivered,
-        items: [],  // you can inject items later if you wish
-        metadata: {
-          full_name: fullName || null,
-          phone: phone || null,
-          addr_line1: address || null
-        },
-        name: fullName || null,
-        session_id: null,
-        track_url: tracking || "",
-        written_at: toISO(sended)
-      };
-    }
-
-    const json = JSON.stringify(out, null, 2);
-    $('#json_data').value = json;
-    $('#download_btn').disabled = false;
-
-  }catch(e){
-    showErr('Failed to read file:\n' + (e?.message || e));
-    console.error(e);
-  }
-});
-
-$('#download_btn').addEventListener('click', ()=>{
-  const json = $('#json_data').value || "{}";
-  const blob = new Blob([json], {type:'application/json;charset=utf-8'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'orders-from-excel.json';
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-});
-</script>
+        function downloadObjectAsJson(jsonData, filename) {
+            const dataStr =
+                "data:text/json;charset=utf-8," + 
+                  encodeURIComponent(jsonData);
+            const downloadAnchorNode = document.createElement("a");
+            downloadAnchorNode.setAttribute("href", dataStr);
+            downloadAnchorNode.setAttribute("download", filename + ".json");
+            document.body.appendChild(downloadAnchorNode);
+            downloadAnchorNode.click();
+            downloadAnchorNode.remove();
+        }
+    </script>
 </body>
+
 </html>
