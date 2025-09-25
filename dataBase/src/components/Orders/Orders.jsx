@@ -44,37 +44,36 @@ export default function Orders() {
     load();
   }, [load]);
 
-  // NEW: PATCH track_url (adjust endpoint if needed)
-  async function handleSaveTrackUrl(id, trackUrl) {
-    try {
-      setSavingId(id);
-      const res = await fetch(
-        `${API_BASE}/api/orders/${encodeURIComponent(id)}`,
-        {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ track_url: trackUrl }),
-        }
-      );
-      if (!res.ok) {
-        let msg = `HTTP ${res.status}`;
-        try {
-          const j = await res.json();
-          if (j?.error) msg += `: ${j.error}`;
-        } catch {}
-        throw new Error(msg);
-      }
-      // optimistic: update row locally
-      setRows((prev) =>
-        prev.map((r) => (r.id === id ? { ...r, track_url: trackUrl } : r))
-      );
-      setEditingId(null);
-    } catch (e) {
-      setError(e.message || String(e));
-    } finally {
-      setSavingId(null);
+// NEW: PATCH track_url (adjust endpoint if needed)
+async function handleSaveTrackUrl(id, trackUrl) {
+  try {
+    setSavingId(id);
+    const res = await fetch(`${API_BASE}/api/orders/${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ changes: { track_url: trackUrl } }), // <-- fixed
+    });
+
+    if (!res.ok) {
+      let msg = `HTTP ${res.status}`;
+      try {
+        const j = await res.json();
+        if (j?.error) msg += `: ${j.error}`;
+        if (j?.detail) msg += ` — ${j.detail}`;
+      } catch {}
+      throw new Error(msg);
     }
+
+    // optimistic UI update
+    setRows(prev => prev.map(r => (r.id === id ? { ...r, track_url: trackUrl } : r)));
+    setEditingId(null);
+  } catch (e) {
+    setError(e.message || String(e));
+  } finally {
+    setSavingId(null);
   }
+}
+
 
   // Existing: flag sweep via CTT
   const logThenPatchOrders = React.useCallback(async () => {

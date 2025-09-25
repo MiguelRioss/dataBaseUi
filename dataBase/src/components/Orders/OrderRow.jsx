@@ -62,7 +62,6 @@ export default function OrderRow({
           <span className="muted">—</span>
         )}
       </td>
-      {/* Actions (only for Track URL edit) */}
       <td>
         {!isEditing ? (
           <button className="btn" onClick={() => onEdit(row.id)}>
@@ -76,9 +75,8 @@ export default function OrderRow({
           status={row.status}
         />
       </td>
-      {/* Keep your older flag if needed */}
       <td>
-        <Badge ok={!!row.delivered == true} trueText="Yes" falseText="No" />
+        <Badge ok={row.status.delivered.status == true} trueText="Yes" falseText="No" />
       </td>
     </tr>
   );
