@@ -2,7 +2,11 @@ import TrackEditor from "./TrackEditor";
 import Badge from "./Badge";
 import AddressPopup from "./AdressPopUp";
 import StatusPopUp from "./StatusPopUp";
+<<<<<<< HEAD
 import { centsToEUR, buildAddress } from "./commonFiles/utils";
+=======
+import { centsToEUR,buildCttUrl } from "./commonFiles/utils";
+>>>>>>> parent of 0766d01 (Revert "//somethings i dont need deleted")
 
 import ProductsPopup from "./ProductsPopup";
 
@@ -14,7 +18,6 @@ export default function OrderRow({
   onSaveTrackUrl,
   saving,
 }) {
-  console.log("Row in OrdersRow:" ,row)
   return (
     <tr key={row.id}>
       <td data-mono>{row.id}</td>
@@ -71,19 +74,10 @@ export default function OrderRow({
           </button>
         ) : null}
       </td>
-      {/* NEW: single status button */}
+    
       <td>
         <StatusPopUp
-          status={{
-            accepted: row.accepted,
-            in_transit: row.in_transit,
-            delivered: row.delivered,
-            // optionally include these if you have them:
-            // accepted_at: row.accepted_at,
-            // in_transit_at: row.in_transit_at,
-            // delivered_at: row.delivered_at,
-            // track_url: row.track_url,
-          }}
+          status={row.status}
         />
       </td>
       {/* Keep your older flag if needed */}
