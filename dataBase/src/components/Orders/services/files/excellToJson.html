@@ -1,160 +1,266 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>XLS → Orders JSON (event-0 keys)</title>
-<style>
-  body{font-family:ui-sans-serif,system-ui,Segoe UI,Roboto,Arial;margin:0;background:#f6f7fb}
-  .wrap{max-width:960px;margin:40px auto;padding:20px;background:#fff;border:1px solid #e5e7eb;border-radius:12px}
-  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
-  label.file{border:1px dashed #cbd5e1;padding:12px 14px;border-radius:10px;cursor:pointer;background:#f8fafc}
-  input[type=file]{display:none}
-  .btn{appearance:none;border:1px solid #cbd5e1;background:#0ea5e9;color:#fff;padding:10px 14px;border-radius:8px;cursor:pointer;font-weight:600}
-  .btn:hover{filter:brightness(0.98)}
-  .ghost{background:#fff;color:#0f172a;border-color:#cbd5e1}
-  textarea{width:100%;min-height:360px;padding:12px;border:1px solid #e5e7eb;border-radius:10px;font-family:ui-monospace,Consolas,Monaco,monospace}
-  .hint{color:#475569;font-size:13px;margin:6px 0 12px}
-  .err{background:#fef2f2;border:1px solid #fecaca;color:#991b1b;padding:10px 12px;border-radius:10px;margin:10px 0;display:none;white-space:pre-wrap}
-  .err.ok{display:block}
-</style>
-<script src="https://unpkg.com/read-excel-file@5.8.8/bundle/read-excel-file.min.js"></script>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>XLS → Orders JSON (event-0 keys)</title>
+    <style>
+        body {
+            font-family: ui-sans-serif, system-ui, Segoe UI, Roboto, Arial;
+            margin: 0;
+            background: #f6f7fb
+        }
+
+        .wrap {
+            max-width: 960px;
+            margin: 40px auto;
+            padding: 20px;
+            background: #fff;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px
+        }
+
+        .row {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+            margin-bottom: 12px
+        }
+
+        label.file {
+            border: 1px dashed #cbd5e1;
+            padding: 12px 14px;
+            border-radius: 10px;
+            cursor: pointer;
+            background: #f8fafc
+        }
+
+        input[type=file] {
+            display: none
+        }
+
+        .btn {
+            appearance: none;
+            border: 1px solid #cbd5e1;
+            background: #0ea5e9;
+            color: #fff;
+            padding: 10px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600
+        }
+
+        .btn:hover {
+            filter: brightness(0.98)
+        }
+
+        .ghost {
+            background: #fff;
+            color: #0f172a;
+            border-color: #cbd5e1
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 360px;
+            padding: 12px;
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+            font-family: ui-monospace, Consolas, Monaco, monospace
+        }
+
+        .hint {
+            color: #475569;
+            font-size: 13px;
+            margin: 6px 0 12px
+        }
+
+        .err {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #991b1b;
+            padding: 10px 12px;
+            border-radius: 10px;
+            margin: 10px 0;
+            display: none;
+            white-space: pre-wrap
+        }
+
+        .err.ok {
+            display: block
+        }
+    </style>
+    <script src="https://unpkg.com/read-excel-file@5.8.8/bundle/read-excel-file.min.js"></script>
 </head>
+
 <body>
-<div class="wrap">
-  <h2>Excel → Orders JSON</h2>
-  <p class="hint">Each sheet row → one order. Keys are <code>event-0</code>, <code>event-1</code>, …</p>
-  <div class="row">
-    <label class="file">
-      <input type="file" id="excel_file" accept=".xlsx,.xls"/>
-      Choose Excel file…
-    </label>
-    <button class="btn" id="convert_btn">Convert</button>
-    <button class="btn ghost" id="download_btn" disabled>Download JSON</button>
-  </div>
-  <div id="err" class="err"></div>
-  <textarea id="json_data" placeholder="{ your JSON will appear here }"></textarea>
-</div>
+    <div class="wrap">
+        <h2>Excel → Orders JSON</h2>
+        <p class="hint">Each sheet row → one order. Keys are <code>event-0</code>, <code>event-1</code>, …</p>
+        <div class="row">
+            <label class="file">
+                <input type="file" id="excel_file" accept=".xlsx,.xls" />
+                Choose Excel file…
+            </label>
+            <button class="btn" id="convert_btn">Convert</button>
+            <button class="btn ghost" id="download_btn" disabled>Download JSON</button>
+        </div>
+        <div id="err" class="err"></div>
+        <textarea id="json_data" placeholder="{ your JSON will appear here }"></textarea>
+    </div>
 
-<script>
-const $ = s => document.querySelector(s);
-const errBox = $('#err');
+    <script>
+        const $ = s => document.querySelector(s);
+        const errBox = $('#err');
 
-function showErr(msg){ errBox.textContent=msg; errBox.classList.add('ok'); }
-function clearErr(){ errBox.textContent=''; errBox.classList.remove('ok'); }
+        function showErr(msg) { errBox.textContent = msg; errBox.classList.add('ok'); }
+        function clearErr() { errBox.textContent = ''; errBox.classList.remove('ok'); }
 
-function normKey(s){
-  return String(s||'').replace(/^\uFEFF/,'').trim().replace(/\s+/g,'_').toLowerCase();
-}
-const toStr = v => (v==null ? "" : String(v).trim());
-const toISO = v => {
-  if (!v) return new Date().toISOString();
-  if (v instanceof Date) return v.toISOString();
-  const d = new Date(v); return isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
-};
+        function normKey(s) {
+            return String(s || '').replace(/^\uFEFF/, '').trim().replace(/\s+/g, '_').toLowerCase();
+        }
+        const toStr = v => (v == null ? "" : String(v).trim());
+        const toISO = v => {
+            if (!v) return new Date().toISOString();
+            if (v instanceof Date) return v.toISOString();
+            const d = new Date(v); return isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
+        };
 
-// naive country inference from address tail
-function inferCountryFromAddress(addr){
-  if (!addr) return null;
-  const s = addr.trim().toUpperCase();
-  // quick wins by common words (expand as you need)
-  if (/\bPORTUGAL|PT\b/.test(s)) return "PT";
-  if (/\bITALIA|ITALY|IT\b/.test(s)) return "IT";
-  if (/\bFRANCE|FR\b/.test(s)) return "FR";
-  if (/\bSUISSE|SWITZERLAND|CH\b/.test(s)) return "CH";
-  if (/\bUK|UNITED KINGDOM|GRAN BRETA(N|NH)A|GB\b/.test(s)) return "GB";
-  if (/\bCANADA|CA\b/.test(s)) return "CA";
-  return null;
-}
+        // naive country inference from address tail
+        function inferCountryFromAddress(addr) {
+            if (!addr) return null;
+            const s = addr.trim().toUpperCase();
+            if (/\bPORTUGAL|PT\b/.test(s)) return "PT";
+            if (/\bITALIA|ITALY|IT\b/.test(s)) return "IT";
+            if (/\bFRANCE|FR\b/.test(s)) return "FR";
+            if (/\bSUISSE|SWITZERLAND|CH\b/.test(s)) return "CH";
+            if (/\bUK|UNITED KINGDOM|GRAN BRETA(N|NH)A|GB\b/.test(s)) return "GB";
+            if (/\bCANADA|CA\b/.test(s)) return "CA";
+            return null;
+        }
 
-// map booleans: "X" → true
-const asX = v => String(v ?? "").trim().toUpperCase() === "X";
+        // "X" → true
+        const asX = v => String(v ?? "").trim().toUpperCase() === "X";
 
-function keyFor(i){ return `event-${i}`; } // << change here if you want another prefix
+        function keyFor(i) { return `event-${i}`; }
 
-$('#convert_btn').addEventListener('click', async ()=>{
-  clearErr();
-  const file = $('#excel_file').files?.[0];
-  if (!file){ showErr('Choose an .xlsx first.'); return; }
+        // --- helpers for the Paid column rules ---
+        function isSample10(s) { return /\b10\s*ml\b|\b10ml\b/i.test(s); }
+        function isSample60(s) { return /\b60\s*ml\b|\b60ml\b/i.test(s); }
+        function isGiveaway(s) { return /\bgive\s*away\b|\bgratis\b|\bfree\b/i.test(s); }
+        function looksLikePositiveAmount(s) {
+            // any number like 300, 300.00, 300,00, £261,18, €900,00, etc.
+            const m = String(s).replace(/\s/g, '').match(/([€£$])?(\d+([.,]\d{1,2})?)/);
+            if (!m) return false;
+            // treat any numeric presence as "paid provided"
+            return parseFloat(m[2].replace(',', '.')) > 0;
+        }
 
-  try{
-    const rows = await readXlsxFile(file);
-    if (!rows || rows.length < 2){ showErr('No data rows found.'); return; }
+        $('#convert_btn').addEventListener('click', async () => {
+            clearErr();
+            const file = $('#excel_file').files?.[0];
+            if (!file) { showErr('Choose an .xlsx first.'); return; }
 
-    // Build header index
-    const headers = rows[0].map(h => normKey(h));
-    const hi = Object.fromEntries(headers.map((h,i)=>[h,i]));
+            try {
+                const rows = await readXlsxFile(file);
+                if (!rows || rows.length < 2) { showErr('No data rows found.'); return; }
 
-    // Expected columns (any case/spacing): 
-    // name, phone number, e-mail, adress, sended, received, tracking, paid
-    function at(row, header){ const i = hi[normKey(header)]; return i==null ? undefined : row[i]; }
+                // Build header index
+                const headers = rows[0].map(h => normKey(h));
+                const hi = Object.fromEntries(headers.map((h, i) => [h, i]));
 
-    const out = {};
-    for (let i=1;i<rows.length;i++){
-      const r = rows[i];
-      if (!r || r.every(v => v==null || v==="")) continue;
+                // expected columns (by label variants)
+                function at(row, header) { const i = hi[normKey(header)]; return i == null ? undefined : row[i]; }
 
-      const fullName = toStr(at(r,'Name'));
-      const email    = toStr(at(r,'E-mail'));
-      const phone    = toStr(at(r,'Phone Number'));
-      const address  = toStr(at(r,'Adress'));   // (spelled exactly like your sheet)
-      const sended   = at(r,'Sended');
-      const received = toStr(at(r,'Received'));
-      const tracking = toStr(at(r,'Tracking'));
-      const paid     = toStr(at(r,'Paid'));
+                const out = {};
+                for (let i = 1; i < rows.length; i++) {
+                    const r = rows[i];
+                    if (!r || r.every(v => v == null || v === "")) continue;
 
-      const delivered  = asX(received);
-      const in_transit = !!(tracking && !delivered);
-      const accepted   = !!sended;
+                    const fullName = toStr(at(r, 'Name'));
+                    const email = toStr(at(r, 'E-mail'));
+                    const phone = toStr(at(r, 'Phone Number'));
+                    const address = toStr(at(r, 'Adress'));
+                    const sended = at(r, 'Sended');
+                    const received = toStr(at(r, 'Received'));
+                    const tracking = toStr(at(r, 'Tracking'));
+                    const paidCell = toStr(at(r, 'Paid'));              // <-- use this for rules
 
-      const key = keyFor(i-1);
+                    const delivered = asX(received);
+                    const in_transit = !!(tracking && !delivered);
+                    const accepted = !!sended;
 
-      out[key] = {
-        address: { country: inferCountryFromAddress(address) },
-        amount_subtotal: null,
-        amount_total: null,
-        currency: "eur",
-        email,
-        email_sent: false,
-        event_id: key,
-        event_type: "manual.import",
-        fulfilled: false,
-        accepted,
-        in_transit,
-        delivered,
-        items: [],  // you can inject items later if you wish
-        metadata: {
-          full_name: fullName || null,
-          phone: phone || null,
-          addr_line1: address || null
-        },
-        name: fullName || null,
-        session_id: null,
-        track_url: tracking || "",
-        written_at: toISO(sended)
-      };
-    }
+                    const key = keyFor(i - 1);
 
-    const json = JSON.stringify(out, null, 2);
-    $('#json_data').value = json;
-    $('#download_btn').disabled = false;
+                    // ----- NEW: pricing + items logic -----
+                    let items = [];
+                    let amount_total = 0;
+                    let amount_subtotal = 0;
+                    let currency = "eur"; // keep as EUR for output
 
-  }catch(e){
-    showErr('Failed to read file:\n' + (e?.message || e));
-    console.error(e);
-  }
-});
+                    if (isSample10(paidCell) || isGiveaway(paidCell)) {
+                        items.push({ product: "10 ml sample", quantity: 1, unit_price: 0, currency });
+                        amount_total = 0;
+                    } else if (isSample60(paidCell)) {
+                        items.push({ product: "60 ml sample", quantity: 1, unit_price: 0, currency });
+                        amount_total = 0;
+                    } else {
+                        // Any other case (including "x", "300", "£261,18", "€900,00", etc.) → treat as normal order
+                        items.push({ product: "Ibotincture", quantity: 1, unit_price: 30000, currency });
+                        amount_total = 30000;
+                    }
+                    amount_subtotal = amount_total;
 
-$('#download_btn').addEventListener('click', ()=>{
-  const json = $('#json_data').value || "{}";
-  const blob = new Blob([json], {type:'application/json;charset=utf-8'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'orders-from-excel.json';
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-});
-</script>
+                    out[key] = {
+                        address: { country: inferCountryFromAddress(address) },
+                        amount_subtotal,
+                        amount_total,
+                        currency,
+                        email,
+                        email_sent: false,
+                        event_id: key,
+                        event_type: "manual.import",
+                        fulfilled: false,
+                        accepted,
+                        in_transit,
+                        delivered,
+                        items,
+                        metadata: {
+                            full_name: fullName || null,
+                            phone: phone || null,
+                            addr_line1: address || null,
+                            original_paid_cell: paidCell || null   // keep the original value for auditing
+                        },
+                        name: fullName || null,
+                        session_id: null,
+                        track_url: tracking || "",
+                        written_at: toISO(sended)
+                    };
+                }
+
+                const json = JSON.stringify(out, null, 2);
+                $('#json_data').value = json;
+                $('#download_btn').disabled = false;
+
+            } catch (e) {
+                showErr('Failed to read file:\n' + (e?.message || e));
+                console.error(e);
+            }
+        });
+
+        $('#download_btn').addEventListener('click', () => {
+            const json = $('#json_data').value || "{}";
+            const blob = new Blob([json], { type: 'application/json;charset=utf-8' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'orders-from-excel.json';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+        });
+    </script>
 </body>
+
 </html>
