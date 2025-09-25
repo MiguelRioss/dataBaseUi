@@ -25,6 +25,7 @@ export default function ProductsPopup({
   title = "Products",
 }) {
   const cur = (items[0]?.currency || currency || "eur").toLowerCase();
+  console.log("items in Products PopuP :" ,items)
   // compute totals safely
   const totalItems = items.reduce((n, it) => n + (Number(it.quantity) || 0), 0);
   const subtotalCents = items.reduce((sum, it) => {
