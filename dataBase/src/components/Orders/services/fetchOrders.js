@@ -1,7 +1,10 @@
-const API_BASE = "https://api-backend-mesodose-2.onrender.com";
+import { resolveApiBase } from "./apiBase";
+
 export default async function fetchOrders(params = {}) {
-  // build URL with optional params (kept simple for now)
-  const url = `${API_BASE}/api/orders${params.limit ? `?limit=${encodeURIComponent(params.limit)}` : ""}`;
+  const { limit, apiBase } = params;
+  const base = (apiBase || resolveApiBase()).replace(/\/$/, "");
+  const url = `${base}/api/orders${limit != null ? `?limit=${encodeURIComponent(limit)}` : ""}`;
+
   const res = await fetch(url);
   if (!res.ok) {
     let msg = `HTTP ${res.status}`;

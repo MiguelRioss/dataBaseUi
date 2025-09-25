@@ -5,8 +5,7 @@ import { mapDbToRows } from "./commonFiles/utils";
 import { buildOrdersObjectWithFlags } from "./services/cttBulk";
 import { patchAllOrderFlags } from "./services/cttPatch";
 import fetchOrders from "./services/fetchOrders";
-
-
+import { API_BASE } from "./services/apiBase";
 
 export default function Orders() {
   const [rows, setRows] = React.useState([]);
@@ -14,7 +13,7 @@ export default function Orders() {
   const [error, setError] = React.useState("");
   const [scanLoading, setScanLoading] = React.useState(false);
 
-  // 👇 NOVO: estado de edição/guardar
+  // NEW: editing/saving state
   const [editingId, setEditingId] = React.useState(null);
   const [savingId, setSavingId] = React.useState(null);
 
@@ -22,7 +21,7 @@ export default function Orders() {
     setError("");
     setLoading(true);
     try {
-      const { items } = await fetchOrders({ limit: 100 });
+      const { items } = await fetchOrders({ limit: 100, apiBase: API_BASE });
 
       // Build object keyed by id so mapDbToRows keeps working
       const byId = Object.fromEntries(
@@ -45,7 +44,7 @@ export default function Orders() {
     load();
   }, [load]);
 
-  // 👇 NOVO: PATCH do track_url (ajuste o endpoint se necessário)
+  // NEW: PATCH track_url (adjust endpoint if needed)
   async function handleSaveTrackUrl(id, trackUrl) {
     try {
       setSavingId(id);
@@ -65,7 +64,7 @@ export default function Orders() {
         } catch {}
         throw new Error(msg);
       }
-      // otimista: atualizar a linha localmente
+      // optimistic: update row locally
       setRows((prev) =>
         prev.map((r) => (r.id === id ? { ...r, track_url: trackUrl } : r))
       );
@@ -77,7 +76,7 @@ export default function Orders() {
     }
   }
 
-  // (mantém) varredura de flags via CTT
+  // Existing: flag sweep via CTT
   const logThenPatchOrders = React.useCallback(async () => {
     setScanLoading(true);
     try {
@@ -102,14 +101,14 @@ export default function Orders() {
       console.log("[PATCH SUMMARY]", summary);
       await load();
     } catch (e) {
-      console.error("[LOG→PATCH] error:", e);
+      console.error("[LOG->PATCH] error:", e);
       setError(e.message || String(e));
     } finally {
       setScanLoading(false);
     }
   }, [load]);
 
-  if (loading) return <div className="page">Loading orders…</div>;
+  if (loading) return <div className="page">Loading orders...</div>;
   if (!rows.length) return <div className="page">No orders yet.</div>;
 
   return (
@@ -129,7 +128,7 @@ export default function Orders() {
             disabled={scanLoading}
             style={{ background: "#0a4", color: "#fff" }}
           >
-            {scanLoading ? "Updating…" : "Log objects → Patch flags"}
+            {scanLoading ? "Updating..." : "Log objects -> Patch flags"}
           </button>
         </div>
       </div>
@@ -161,7 +160,7 @@ export default function Orders() {
             <th>Price</th>
             <th>Track URL</th>
             <th style={{ width: 240 }}>Actions</th>
-            <th>Status</th> {/* ← NEW */}
+            <th>Status</th> {/* NEW */}
             <th>Completed?</th>
           </tr>
         </thead>
@@ -172,7 +171,7 @@ export default function Orders() {
               key={r.id}
               row={r}
               isEditing={editingId === r.id}
-              onEdit={() => setEditingId(r.id)} // <- ativa edição desta linha
+              onEdit={() => setEditingId(r.id)} // enables editing for this row
               onCancelEdit={() => setEditingId(null)}
               onSaveTrackUrl={handleSaveTrackUrl}
               saving={savingId === r.id}
