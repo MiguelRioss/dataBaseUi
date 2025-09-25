@@ -130,8 +130,12 @@ export function mapDbToRows(valObj = {}) {
     };
   });
 }
+<<<<<<< HEAD
+
 
 export function formatCents(cents = 0, currency = "eur") {
   const amt = (Number(cents) || 0) / 100;
   return new Intl.NumberFormat("en-IE", { style: "currency", currency: currency.toUpperCase() }).format(amt);
 }
+=======
+>>>>>>> parent of 0766d01 (Revert "//somethings i dont need deleted")
