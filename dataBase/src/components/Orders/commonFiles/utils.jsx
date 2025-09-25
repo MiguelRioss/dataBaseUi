@@ -60,34 +60,6 @@ export function mapDbToRows(valObj = {}) {
     const acceptedStep  = step("accepted");
     const inTransitStep = step("in_transit");                    // canonical
     const waitingStep   = step("wating_to_Be_Delivered");        // spelling per backend
-
-    // --- Legacy fallbacks (older docs) ---
-    const legacyAccepted   = v?.accepted;
-    const legacyInTransit  = v?.in_transit ?? v?.in_traffic;     // read both
-    const legacyDelivered  = v?.delivered;
-    const legacyStatusStr  = typeof v?.status === "string" ? v.status : null;
-
-    const acceptedFlag =
-      typeof acceptedStep.status === "boolean"
-        ? acceptedStep.status
-        : typeof legacyAccepted === "boolean"
-          ? legacyAccepted
-          : legacyStatusStr === "accepted";
-
-    const inTransitFlag =
-      typeof inTransitStep.status === "boolean"
-        ? inTransitStep.status
-        : typeof legacyInTransit === "boolean"
-          ? legacyInTransit
-          : legacyStatusStr === "in_transit" || legacyStatusStr === "in_traffic";
-
-    const deliveredFlag =
-      typeof deliveredStep.status === "boolean"
-        ? deliveredStep.status
-        : typeof legacyDelivered === "boolean"
-          ? legacyDelivered
-          : legacyStatusStr === "delivered";
-
     return {
       id,
       date: v?.written_at ? new Date(v.written_at) : null,
@@ -105,11 +77,7 @@ export function mapDbToRows(valObj = {}) {
       fulfilled: !!v?.fulfilled,
       email_sent: !!(v?.email_sent ?? v?.email_sended),
 
-      // legacy-compatibility fields (booleans)
-      accepted:   !!acceptedFlag,
-      in_transit: !!inTransitFlag,   // canonical name in UI
-      delivered:  !!deliveredFlag,
-
+ 
       // expose the full structured status for richer UI (new model)
       status: {
         delivered: deliveredStep,
