@@ -4,29 +4,9 @@ import OrderRow from "./OrderRow";
 import { mapDbToRows } from "./commonFiles/utils";
 import { buildOrdersObjectWithFlags } from "./services/cttBulk";
 import { patchAllOrderFlags } from "./services/cttPatch";
+import fetchOrders from "./services/fetchOrders";
 
-const API_BASE = (
-  import.meta.env?.VITE_API_BASE_URL || "https://api-new-six.vercel.app"
-).replace(/\/$/, "");
 
-async function fetchOrders(params = {}) {
-  const q = new URLSearchParams();
-  if (params.status) q.set("status", params.status);
-  if (params.customerId) q.set("customerId", params.customerId);
-  if (params.limit) q.set("limit", String(params.limit));
-  const url = `${API_BASE}/api/orders${q.toString() ? `?${q}` : ""}`;
-
-  const res = await fetch(url);
-  if (!res.ok) {
-    let msg = `HTTP ${res.status}`;
-    try {
-      const j = await res.json();
-      if (j?.error) msg += `: ${j.error}`;
-    } catch {}
-    throw new Error(msg);
-  }
-  return res.json(); // { items, count }
-}
 
 export default function Orders() {
   const [rows, setRows] = React.useState([]);
@@ -43,9 +23,16 @@ export default function Orders() {
     setLoading(true);
     try {
       const { items } = await fetchOrders({ limit: 100 });
-      const list = mapDbToRows(
-        Object.fromEntries((items || []).map((o) => [o.id, o]))
-      ).sort((a, b) => (b.date?.getTime?.() ?? 0) - (a.date?.getTime?.() ?? 0));
+
+      // Build object keyed by id so mapDbToRows keeps working
+      const byId = Object.fromEntries(
+        (items || []).map((o) => [o.id, o])
+      );
+
+      const list = mapDbToRows(byId).sort(
+        (a, b) => (b.date?.getTime?.() ?? 0) - (a.date?.getTime?.() ?? 0)
+      );
+
       setRows(list);
     } catch (e) {
       setError(e.message || String(e));
@@ -98,7 +85,6 @@ export default function Orders() {
         apiBase: API_BASE,
         limit: 100,
       });
-      console.log("[PRE-PATCH] ORDERS OBJECT", obj);
       console.table(
         Object.entries(obj).map(([orderId, v]) => ({
           orderId,

@@ -3,8 +3,8 @@ import ModalPortal from "./ModalPortal";
 import Badge from "../Badge";
 
 export default function ObjectPopup({
-  title = "Details",
-  buttonText = "View",
+  title ,
+  buttonText,
   data = {},
   fields,
 }) {
