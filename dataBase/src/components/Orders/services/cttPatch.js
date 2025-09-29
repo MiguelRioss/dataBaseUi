@@ -1,90 +1,97 @@
 // /src/services/cttPatch.js
-
-const ALLOWED = new Set(["accepted", "in_transit", "delivered"]);
-
-async function jfetch(url, opts = {}) {
-  const res = await fetch(url, {
-    headers: { "Content-Type": "application/json", ...(opts.headers || {}) },
-    ...opts,
-  });
-  if (!res.ok) {
-    let msg = `HTTP ${res.status}`;
-    try { const j = await res.json(); if (j?.error) msg += `: ${j.error}`; } catch {}
-    throw new Error(msg);
-  }
-  return res.json();
-}
-
-// Convert flags that might be an array or object into a compact patch object
-function toPatch(flags) {
-  if (!flags) return {};
-  // if it's an array like ["accepted","delivered"]
-  if (Array.isArray(flags)) {
-    const out = {};
-    for (const k of flags) if (ALLOWED.has(k)) out[k] = true;
-    return out;
-  }
-  // if it's an object like {accepted:true, delivered:true, waiting:false}
-  const out = {};
-  for (const [k, v] of Object.entries(flags)) {
-    if (ALLOWED.has(k) && v) out[k] = true; // send only truthy fields
-  }
-  return out;
-}
+import { API_BASE } from "./apiBase";
 
 /**
- * Patch a single order: PATCH /api/orders/:id with { accepted?, in_transit?, delivered? }
+ * Patch a single order: PATCH /api/orders/:id with { status }.
+ * Skips if no RT or already delivered.
  */
-export async function patchOrderFlags({ apiBase, orderId, flags }) {
-  if (!apiBase) throw new Error("patchOrderFlags: apiBase is required");
-  if (!orderId) throw new Error("patchOrderFlags: orderId is required");
-  const BASE = apiBase.replace(/\/$/, "");
-
-  const body = toPatch(flags);
-  if (!Object.keys(body).length) {
-    // nothing to update; mirror server behaviour “NO_ALLOWED_FIELDS”
-    return { orderId, skipped: true, reason: "no-allowed-flags" };
+export async function patchOrderFlags({ orderId, trackUrl, status }) {
+  if (!trackUrl) {
+    console.log(`[SKIP] Order ${orderId} has no track_url`);
+    return null;
+  }
+  if (status?.delivered?.status === true) {
+    console.log(`[SKIP] Order ${orderId} already delivered`);
+    return null;
   }
 
-  const url = `${BASE}/api/orders/${encodeURIComponent(orderId)}`;
-  const result = await jfetch(url, { method: "PATCH", body: JSON.stringify(body) });
-  return { orderId, patched: true, body, result };
-}
+  try {
+    // 1. Fetch CTT tracking info
+    const URL_FETCH_CTT = API_BASE + `/api/ctt?rt=${trackUrl}`;
+    console.log(`[FETCH CTT] Order ${orderId} → ${URL_FETCH_CTT}`);
 
-/**
- * Patch many orders from a map like:
- * { [orderId]: { track_url, code, label, flags } }
- * Only patches truthy allowed flags.
- */
-export async function patchAllOrderFlags({
-  apiBase,
-  ordersObj,      // object produced by your builder
-  delayMs = 150,  // politeness delay between requests
-  dryRun = false, // if true, don't actually PATCH
-  logger = console.log,
-} = {}) {
-  if (!apiBase) throw new Error("patchAllOrderFlags: apiBase is required");
-  if (!ordersObj || typeof ordersObj !== "object") throw new Error("patchAllOrderFlags: ordersObj is required");
-
-  const sleep = (ms) => new Promise(r => setTimeout(r, ms));
-  let patched = 0, skipped = 0, errors = 0;
-
-  for (const [orderId, rec] of Object.entries(ordersObj)) {
-    try {
-      const body = toPatch(rec.flags);
-      if (!Object.keys(body).length) {
-        skipped++; logger(`[PATCH] ${orderId}: no-allowed-flags`);
-      } else if (dryRun) {
-        skipped++; logger(`[PATCH] ${orderId}: DRY RUN ->`, body);
-      } else {
-        const out = await patchOrderFlags({ apiBase, orderId, flags: body });
-        patched++; logger(`[PATCH] ${orderId}:`, out.body);
-      }
-    } catch (e) {
-      errors++; logger(`[PATCH] ${orderId} error:`, e?.message || String(e));
+    const response = await fetch(URL_FETCH_CTT);
+    if (!response.ok) {
+      console.error(`[ERROR] CTT fetch failed for ${orderId}: ${response.status} ${response.statusText}`);
+      return null;
     }
-    if (delayMs) await sleep(delayMs);
+    const jsonObject = await response.json();
+
+    // 2. Extract summary
+    const summary = jsonObject.summary;
+    if (!summary) {
+      console.error(`[ERROR] No summary in CTT response for order ${orderId}`);
+      return null;
+    }
+
+    // 3. Build patch body
+    const changes = { changes: { status: summary } };
+
+    // 4. Call PATCH API
+    const URL_PATCH = API_BASE + `/api/orders/${orderId}`;
+    const patchResponse = await fetch(URL_PATCH, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(changes),
+    });
+
+    if (!patchResponse.ok) {
+      console.error(`[ERROR] Failed to patch order ${orderId}: ${patchResponse.status} ${patchResponse.statusText}`);
+      return null;
+    }
+
+    const result = await patchResponse.json();
+    console.log(`[PATCHED] Order ${orderId}`, result);
+    return result;
+  } catch (err) {
+    console.error(`[EXCEPTION] patchOrderFlags(${orderId}):`, err);
+    return null;
+  }
+}
+
+/**
+ * Patch many orders with streaming progress + controlled concurrency.
+ *
+ * @param {Array<Object>} orders - Array of orders like { id, track_url, status }
+ * @param {number} [batchSize=10] - Max number of concurrent requests
+ * @returns {Promise<Array>} Results in the same order as input
+ */
+export async function patchAllOrderFlags(orders, batchSize = 10) {
+  const results = new Array(orders.length);
+
+  // index pointer
+  let index = 0;
+
+  async function worker(workerId) {
+    while (index < orders.length) {
+      const current = index++;
+      const order = orders[current];
+      const res = await patchOrderFlags({
+        orderId: order.id,
+        trackUrl: order.track_url,
+        status: order.status,
+      });
+      results[current] = res;
+      console.log(`[WORKER ${workerId}] Done order ${order.id} (${current + 1}/${orders.length})`);
+    }
   }
 
-  return { total: Object.keys(ordersObj).length, patched, skipped, errors };
+  // spin up N workers
+  const workers = [];
+  for (let i = 0; i < batchSize; i++) {
+    workers.push(worker(i + 1));
+  }
+
+  await Promise.all(workers);
+  return results;
 }

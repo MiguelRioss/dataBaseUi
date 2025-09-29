@@ -2,7 +2,6 @@
 import React from "react";
 import OrderRow from "./OrderRow";
 import { mapDbToRows } from "./commonFiles/utils";
-import { buildOrdersObjectWithFlags } from "./services/cttBulk";
 import { patchAllOrderFlags } from "./services/cttPatch";
 import fetchOrders from "./services/fetchOrders";
 import { API_BASE } from "./services/apiBase";
@@ -75,37 +74,31 @@ async function handleSaveTrackUrl(id, trackUrl) {
 }
 
 
-  // Existing: flag sweep via CTT
-  const logThenPatchOrders = React.useCallback(async () => {
-    setScanLoading(true);
-    try {
-      const obj = await buildOrdersObjectWithFlags({
-        apiBase: API_BASE,
-        limit: 100,
-      });
-      console.table(
-        Object.entries(obj).map(([orderId, v]) => ({
-          orderId,
-          code: v.code,
-          label: v.label,
-          flags: JSON.stringify(v.flags),
-          track_url: v.track_url,
-        }))
-      );
-      const summary = await patchAllOrderFlags({
-        apiBase: API_BASE,
-        ordersObj: obj,
-        delayMs: 150,
-      });
-      console.log("[PATCH SUMMARY]", summary);
-      await load();
-    } catch (e) {
-      console.error("[LOG->PATCH] error:", e);
-      setError(e.message || String(e));
-    } finally {
-      setScanLoading(false);
-    }
-  }, [load]);
+const logThenPatchOrders = React.useCallback(async () => {
+  setScanLoading(true);
+  try {
+    // assume you already have an array of orders somewhere
+    const orders = (await fetchOrders()).items; 
+    // Log for visibility
+    console.table(
+      orders.map((o) => ({
+        orderId: o.id,
+        track_url: o.track_url,
+      }))
+    );
+
+    // Call service to patch all
+    const summary = await patchAllOrderFlags(orders);
+
+    await load(); // refresh UI
+  } catch (e) {
+    console.error("[LOG->PATCH] error:", e);
+    setError(e.message || String(e));
+  } finally {
+    setScanLoading(false);
+  }
+}, [load]);
+
 
   if (loading) return <div className="page">Loading orders...</div>;
   if (!rows.length) return <div className="page">No orders yet.</div>;
