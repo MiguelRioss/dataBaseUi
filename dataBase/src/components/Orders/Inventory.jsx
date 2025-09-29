@@ -1,4 +1,6 @@
 import React from "react";
+import fetchOrders from "./services/fetchOrders";
+import fetchStock from "./services/fetchStock";
 
 /**
  * Inventory (self-fetching)
@@ -32,11 +34,18 @@ export default function Inventory({
       setLoading(true);
       setError("");
       try {
-        const res = await fetch(API_URL);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const j = await res.json();
-        const stock = j?.stock && typeof j.stock === "object" ? j.stock : null;
-        if (alive && stock) setRows(normalize(stock));
+        const data = await fetchStock();
+        const payload = (data && typeof data === "object")
+          ? (
+              Array.isArray(data.items)
+                ? data.items
+                : (data.items && typeof data.items === "object")
+                  ? (data.items.stock ?? data.items)
+                  : (data.stock ?? data)
+            )
+          : data;
+        if (!payload) throw new Error("Empty stock response");
+        if (alive) setRows(normalize(payload));
       } catch (e) {
         // Fall back to `initial` silently, but surface the error
         setError(e.message || String(e));
@@ -49,37 +58,6 @@ export default function Inventory({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [API_URL]); // only when base changes
 
-  // ---------- external change callback + debounced autosave ----------
-  React.useEffect(() => {
-    const obj = toObject(rows);
-    onChange?.(obj);
-
-    if (!autoSave) return;
-
-    setDirty(true);
-    if (saveTimer.current) clearTimeout(saveTimer.current);
-
-    saveTimer.current = setTimeout(async () => {
-      setSaving(true);
-      setError("");
-      try {
-        const res = await fetch(API_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ updates: obj }),
-        });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        await res.json(); // ignore body; assume success
-        setDirty(false);
-      } catch (e) {
-        setError(e.message || String(e));
-      } finally {
-        setSaving(false);
-      }
-    }, debounceMs);
-
-    return () => saveTimer.current && clearTimeout(saveTimer.current);
-  }, [rows, autoSave, debounceMs, API_URL, onChange]);
 
   // ---------- UI handlers ----------
   function addRow() {
@@ -160,7 +138,12 @@ export default function Inventory({
 /* ---------- helpers ---------- */
 function normalize(initial) {
   if (Array.isArray(initial)) {
-    return initial.map((x) => ({ key: String(x.key ?? ""), qty: Number(x.qty ?? 0) }));
+    return initial.map((x) => {
+      // Support various shapes: {key, qty} | {name, stock} | {sku/SKU, quantity}
+      const keyRaw = x?.key ?? x?.name ?? x?.sku ?? x?.SKU ?? x?.id ?? "";
+      const qtyRaw = x?.qty ?? x?.stock ?? x?.quantity ?? 0;
+      return { key: String(keyRaw ?? ""), qty: Number(qtyRaw ?? 0) };
+    });
   }
   if (initial && typeof initial === "object") {
     return Object.entries(initial).map(([k, v]) => ({ key: String(k), qty: Number(v || 0) }));
