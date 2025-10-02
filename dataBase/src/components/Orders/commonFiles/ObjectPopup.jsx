@@ -1,6 +1,6 @@
 import React from "react";
 import ModalPortal from "./ModalPortal";
-import Badge from "../Badge";
+import Badge from "./Badge";
 
 export default function ObjectPopup({
   title ,

@@ -1,10 +1,11 @@
-import TrackEditor from "./TrackEditor";
-import Badge from "./Badge";
-import AddressPopup from "./AdressPopUp";
-import StatusPopUp from "./StatusPopUp";
-import { centsToEUR,buildCttUrl } from "./commonFiles/utils";
+import TrackEditor from "./commonFiles/TrackEditor";
+import AddressPopup from "./commonFiles/AdressPopUp";
+import StatusPopUp from "./commonFiles/StatusPopUp";
+import { centsToEUR, buildCttUrl } from "./commonFiles/utils";
+import ProductsPopup from "./commonFiles/ProductsPopup";
 
-import ProductsPopup from "./ProductsPopup";
+// NOTE: we won't import Badge here so we can make the cell clickable using the same classes.
+// If you prefer to keep <Badge />, see the comment near the bottom.
 
 export default function OrderRow({
   row,
@@ -13,7 +14,13 @@ export default function OrderRow({
   onCancelEdit,
   onSaveTrackUrl,
   saving,
+
+  // NEW — pass from parent:
+  onUpdateStatus,            // (orderId, flatPatch) => Promise<void>
+  onToggleDelivered,         // (orderId, nextVal:boolean) => Promise<void>
 }) {
+  const deliveredOk = !!row?.status?.delivered?.status;
+
   return (
     <tr key={row.id}>
       <td data-mono>{row.id}</td>
@@ -31,20 +38,15 @@ export default function OrderRow({
           title="Order products"
         />
       </td>
+
       <td>
-        {/* Show compact address plus a popup button */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            flexWrap: "wrap",
-          }}
-        >
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
           <AddressPopup address={row.metadata} />
         </div>
       </td>
+
       <td>{centsToEUR(row.amount)}</td>
+
       {/* Track URL (editable) */}
       <td className="wrap">
         {isEditing ? (
@@ -62,6 +64,7 @@ export default function OrderRow({
           <span className="muted">—</span>
         )}
       </td>
+
       <td>
         {!isEditing ? (
           <button className="btn" onClick={() => onEdit(row.id)}>
@@ -69,14 +72,33 @@ export default function OrderRow({
           </button>
         ) : null}
       </td>
-    
+
+      {/* STATUS POPUP — now receives a save handler */}
       <td>
         <StatusPopUp
           status={row.status}
+          onSave={(flatPatch) => onUpdateStatus?.(row.id, flatPatch)}
         />
       </td>
+
+      {/* COMPLETED? — clickable badge using your existing classes */}
       <td>
-        <Badge ok={row.status.delivered.status == true} trueText="Yes" falseText="No" />
+        <button
+          type="button"
+          onClick={() => onToggleDelivered?.(row.id, !deliveredOk)}
+          className={`badge ${deliveredOk ? "badge--ok" : "badge--no"}`}
+          style={{ cursor: "pointer" }}
+          title="Toggle Delivered"
+        >
+          {deliveredOk ? "Yes" : "No"}
+        </button>
+        {/* If you insist on keeping the <Badge/> component, replace the <button> with:
+            <span onClick={() => onToggleDelivered?.(row.id, !deliveredOk)}
+                  className={`badge ${deliveredOk ? "badge--ok" : "badge--no"}`}
+                  style={{ cursor: "pointer" }}>
+              {deliveredOk ? "Yes" : "No"}
+            </span>
+        */}
       </td>
     </tr>
   );

@@ -1,7 +1,6 @@
-import React from "react";
-import ObjectPopup from "./commonFiles/ObjectPopup";
-import ItemsList from "./commonFiles/ItemsList"
-import {formatCents} from "./commonFiles/utils"
+import ObjectPopup from ".//ObjectPopup";
+import ItemsList from "./ItemsList"
+import {formatCents} from ".//utils"
 
 /**
  * ProductsPopup

@@ -1,6 +1,6 @@
 import React from "react";
-import fetchOrders from "./services/fetchOrders";
-import fetchStock from "./services/fetchStock";
+import fetchOrders from "../services/fetchOrders";
+import fetchStock from "../services/fetchStock";
 
 /**
  * Inventory (self-fetching)
@@ -14,8 +14,6 @@ export default function Inventory({
   step = 1,
   min = 0,
   max = 9999,
-  autoSave = true,
-  debounceMs = 500,
   apiBase = (import.meta.env?.VITE_API_BASE_URL || "").replace(/\/$/, ""),
 }) {
   const API_URL = `${apiBase}/api/stock`;
@@ -150,13 +148,7 @@ function normalize(initial) {
   }
   return [];
 }
-function toObject(rows) {
-  return rows.reduce((acc, r) => {
-    const k = (r.key || "").trim();
-    if (k) acc[k] = Number(r.qty) || 0;
-    return acc;
-  }, {});
-}
+
 function suggestKey(rows) {
   const base = "SKU";
   let n = rows.length + 1;

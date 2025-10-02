@@ -1,6 +1,6 @@
 // src/components/AddressPopup.jsx
-import ObjectPopup from "./commonFiles/ObjectPopup";
-import { buildAddress } from "./commonFiles/utils";
+import ObjectPopup from "./ObjectPopup";
+import { buildAddress } from "./utils";
 
 function normalizeAddress(src = {}) {
   return {

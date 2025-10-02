@@ -6,7 +6,7 @@ import Orders from "./components/Orders/Orders";
 import Login from "./components/Login";
 import DataBaseIconsGrid from "./components/DataBaseIconsGrid";
 import "./App.css";
-import Inventory from "./components/Orders/Inventory";
+import Inventory from "./components/Inventory/Inventory";
 
 export default function App() {
   const [user, setUser] = React.useState(null);
