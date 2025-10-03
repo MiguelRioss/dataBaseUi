@@ -1,6 +1,8 @@
 import React from "react";
-import fetchOrders from "../services/fetchOrders";
-import fetchStock from "../services/fetchStock";
+import fetchStock, {
+  updateStockAPI,
+  adjustStockAPI,
+} from "../services/StockAPIuse";
 
 /**
  * Inventory (self-fetching)
@@ -33,15 +35,14 @@ export default function Inventory({
       setError("");
       try {
         const data = await fetchStock();
-        const payload = (data && typeof data === "object")
-          ? (
-              Array.isArray(data.items)
-                ? data.items
-                : (data.items && typeof data.items === "object")
-                  ? (data.items.stock ?? data.items)
-                  : (data.stock ?? data)
-            )
-          : data;
+        const payload =
+          data && typeof data === "object"
+            ? Array.isArray(data.items)
+              ? data.items
+              : data.items && typeof data.items === "object"
+              ? data.items.stock ?? data.items
+              : data.stock ?? data
+            : data;
         if (!payload) throw new Error("Empty stock response");
         if (alive) setRows(normalize(payload));
       } catch (e) {
@@ -52,25 +53,48 @@ export default function Inventory({
         alive && setLoading(false);
       }
     })();
-    return () => { alive = false; };
+    return () => {
+      alive = false;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [API_URL]); // only when base changes
-
 
   // ---------- UI handlers ----------
   function addRow() {
     setRows((r) => [...r, { key: suggestKey(r), qty: 0 }]);
   }
-  function setQty(i, val) {
+  async function setQty(i, val) {
     const n = clamp(Number(val), min, max);
-    setRows((r) => r.map((row, idx) => (idx === i ? { ...row, qty: n } : row)));
+
+    setRows((r) => {
+      const updatedRows = r.map((row, idx) =>
+        idx === i ? { ...row, qty: n } : row
+      );
+
+      const row = updatedRows[i];
+      updateStockAPI(row.id, { stockValue: n }, apiBase) // ✅ use id
+        .then((result) => console.log("Updated stock:", result))
+        .catch((err) => setError(err.message || String(err)));
+
+      return updatedRows;
+    });
   }
-  function bump(i, delta) {
-    setRows((r) =>
-      r.map((row, idx) =>
-        idx === i ? { ...row, qty: clamp((Number(row.qty) || 0) + delta, min, max) } : row
-      )
-    );
+
+  async function bump(i, delta) {
+    setRows((r) => {
+      const updatedRows = r.map((row, idx) =>
+        idx === i
+          ? { ...row, qty: clamp((Number(row.qty) || 0) + delta, min, max) }
+          : row
+      );
+
+      const row = updatedRows[i];
+      adjustStockAPI(row.id, delta, apiBase) // ✅ use id
+        .then((result) => console.log("Adjusted stock:", result))
+        .catch((err) => setError(err.message || String(err)));
+
+      return updatedRows;
+    });
   }
 
   return (
@@ -79,49 +103,69 @@ export default function Inventory({
       <div className="inv-head">
         <span className="inv-title">stock</span>
         <div className="muted" style={{ fontSize: 12 }}>
-          {loading ? "Loading…" : saving ? "Saving…" : dirty ? "Unsaved…" : "Up to date"}
+          {loading
+            ? "Loading…"
+            : saving
+            ? "Saving…"
+            : dirty
+            ? "Unsaved…"
+            : "Up to date"}
           {error ? <span style={{ color: "#f87171" }}> · {error}</span> : null}
         </div>
         <div className="inv-actions">
-          <button className="btn" title="Add row" onClick={addRow} disabled={loading}>+</button>
+          <button
+            className="btn"
+            title="Add row"
+            onClick={addRow}
+            disabled={loading}
+          >
+            +
+          </button>
         </div>
       </div>
 
       {/* Rows */}
       <div className="inv-list">
-        {!loading && rows.map((row, i) => (
-          <div className="inv-row inv-row--compact" key={`${row.key}-${i}`}>
-            <div className="inv-key--label" title={row.key}>{row.key}</div>
+        {!loading &&
+          rows.map((row, i) => (
+            <div className="inv-row inv-row--compact" key={`${row.key}-${i}`}>
+              <div className="inv-key--label" title={row.key}>
+                {row.key}
+              </div>
 
-            <div className="inv-ctrl">
-              <button
-                type="button"
-                className="btn inv-btn"
-                onClick={() => bump(i, -step)}
-                disabled={row.qty <= min || loading}
-                aria-label="Decrease"
-              >–</button>
+              <div className="inv-ctrl">
+                <button
+                  type="button"
+                  className="btn inv-btn"
+                  onClick={() => bump(i, -step)}
+                  disabled={row.qty <= min || loading}
+                  aria-label="Decrease"
+                >
+                  –
+                </button>
 
-              <input
-                className="inv-qty"
-                type="number"
-                inputMode="numeric"
-                value={row.qty}
-                min={min}
-                max={max}
-                onChange={(e) => setQty(i, e.target.value)}
-              />
+                <input
+                  className="inv-qty"
+                  type="number"
+                  inputMode="numeric"
+                  value={row.qty}
+                  min={min}
+                  max={max}
+                  onChange={(e) => setQty(i, e.target.value)}
+                />
 
-              <button
-                type="button"
-                className="btn inv-btn"
-                onClick={() => bump(i, step)}
-                disabled={row.qty >= max || loading}
-                aria-label="Increase"
-              >+</button>
+                <button
+                  type="button"
+                  className="btn inv-btn"
+                  onClick={() => bump(i, step)}
+                  disabled={row.qty >= max || loading}
+                  aria-label="Increase"
+                >
+                  +
+                </button>
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
 
         {!loading && rows.length === 0 && (
           <div className="muted" style={{ padding: 8, fontSize: 13 }}>
@@ -137,15 +181,22 @@ export default function Inventory({
 function normalize(initial) {
   if (Array.isArray(initial)) {
     return initial.map((x) => {
-      // Support various shapes: {key, qty} | {name, stock} | {sku/SKU, quantity}
-      const keyRaw = x?.key ?? x?.name ?? x?.sku ?? x?.SKU ?? x?.id ?? "";
-      const qtyRaw = x?.qty ?? x?.stock ?? x?.quantity ?? 0;
-      return { key: String(keyRaw ?? ""), qty: Number(qtyRaw ?? 0) };
+      return {
+        id: String(x?.id ?? ""), // keep the ID for backend calls
+        key: String(x?.name ?? ""), // display name
+        qty: Number(x?.stockValue ?? 0), // stock value
+      };
     });
   }
+
   if (initial && typeof initial === "object") {
-    return Object.entries(initial).map(([k, v]) => ({ key: String(k), qty: Number(v || 0) }));
+    return Object.entries(initial).map(([id, v]) => ({
+      id: String(id),
+      key: String(v?.name ?? id),
+      qty: Number(v?.stockValue ?? v ?? 0),
+    }));
   }
+
   return [];
 }
 
@@ -154,7 +205,10 @@ function suggestKey(rows) {
   let n = rows.length + 1;
   let candidate = `${base}_${n}`;
   const set = new Set(rows.map((r) => r.key));
-  while (set.has(candidate)) { n += 1; candidate = `${base}_${n}`; }
+  while (set.has(candidate)) {
+    n += 1;
+    candidate = `${base}_${n}`;
+  }
   return candidate;
 }
 function clamp(n, lo, hi) {
