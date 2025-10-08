@@ -18,13 +18,13 @@ import { formatCents } from "./utils/utils";
  *  - title?: string
  */
 export default function ProductsPopup({
-  shipping_cost_cents,
+  shippingCost,
   items = [],
   currency = "eur",
   buttonText = "View products",
   title = "Products",
 }) {
-  console.log("Shipping cost cents:", shipping_cost_cents);
+  console.log("Shipping cost cents:", shippingCost);
   const cur = (items[0]?.currency || currency || "eur").toLowerCase();
   // compute totals safely
   const totalItems = items.reduce((n, it) => n + (Number(it.quantity) || 0), 0);
@@ -39,7 +39,7 @@ export default function ProductsPopup({
     items, // custom-rendered below
     total_items: totalItems,
     subtotal: formatCents(subtotalCents, cur),
-    shipping: shipping_cost_cents,
+    shipping: shippingCost,
     currency: cur.toUpperCase(),
   };
 

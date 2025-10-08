@@ -21,8 +21,8 @@ export default function OrderRow({
   onUpdateStatus, // (orderId, flatPatch) => Promise<void>
   onToggleDelivered, // (orderId, nextVal:boolean) => Promise<void>
 }) {
-  console.log("Rendering OrderRow", row);
   const deliveredOk = !!row?.status?.delivered?.status;
+  console.log("Shipping cost:", row?.shippingCost);
   return (
     <tr key={row.id}>
       <td data-mono>{row.id}</td>
@@ -34,7 +34,7 @@ export default function OrderRow({
 
       <td>
         <ProductsPopup
-          shipping={row.shipping_cost_cents}
+          shippingCost={row.shippingCost}
           items={row.items}
           currency={row.currency || "eur"}
           buttonText="View products"
