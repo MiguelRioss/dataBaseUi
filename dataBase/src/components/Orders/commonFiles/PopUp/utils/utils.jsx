@@ -25,19 +25,31 @@ export function buildCttUrl(code = "") {
 
 export function mapDbToRows(valObj = {}) {
   return Object.entries(valObj).map(([id, v]) => {
-    const metaAddr = v?.metadata
-      ? {
-          line1:       v.metadata.addr_line1 ?? "",
-          city:        v.metadata.addr_city  ?? "",
-          postal_code: v.metadata.addr_zip   ?? "",
-          country:     v.metadata.addr_ctry  ?? "",
-        }
-      : {};
+    const meta = v?.metadata ?? {};
 
-    const address =
-      v?.address && Object.keys(v.address).length ? v.address : metaAddr;
+    // --- Extract metadata-level addresses ---
+    const shipping_address = { ...(meta.shipping_address ?? {}) };
+    const billing_address = { ...(meta.billing_address ?? {}) };
 
-    // --- Structured status (new model) ---
+    // --- Auto-fill missing name and phone/email fields ---
+    const fullName = v.name;
+    const phone = meta.phone;
+
+    const email = v.email;
+    const shippingCost = meta.shipping_cost_cents;
+    if (!shipping_address.full_name) shipping_address.full_name = fullName;
+    if (!shipping_address.phone) shipping_address.phone = phone;
+    if (!shipping_address.email) shipping_address.email = email;
+
+    if (!billing_address.full_name) billing_address.full_name = fullName;
+    if (!billing_address.phone) billing_address.phone = phone;
+    if (!billing_address.email) billing_address.email = email;
+
+    // --- Fallback address shape if no structured one exists ---
+
+    const address = v.address;
+
+    // --- Structured status (unchanged) ---
     const statusObj =
       v && v.status && typeof v.status === "object" && !Array.isArray(v.status)
         ? v.status
@@ -57,43 +69,44 @@ export function mapDbToRows(valObj = {}) {
 
     const deliveredStep = step("delivered");
     const acceptedInCtt = step("acceptedInCtt");
-    const acceptedStep  = step("accepted");
-    const inTransitStep = step("in_transit");                    // canonical
-    const waitingStep   = step("wating_to_Be_Delivered");        // spelling per backend
+    const acceptedStep = step("accepted");
+    const inTransitStep = step("in_transit");
+    const waitingStep = step("wating_to_Be_Delivered");
+
+    // --- Final mapped object ---
     return {
       id,
       date: v?.written_at ? new Date(v.written_at) : null,
-      name: v?.name || v?.metadata?.full_name || v?.metadata?.fullName || "—",
-      email: v?.email ?? "—",
+      name: fullName,
+      email,
       amount: v?.amount_total ?? null,
       currency: v?.currency ?? "eur",
-
-      address,                // normalized for UI
-      metadata: v?.metadata ?? {},
+      shippingCost,
+      shipping_address,
+      billing_address,
       track_url: v?.track_url ?? "",
       items: Array.isArray(v?.items) ? v.items : [],
-
-      // existing booleans the UI already uses
       fulfilled: !!v?.fulfilled,
       email_sent: !!(v?.email_sent ?? v?.email_sended),
 
- 
-      // expose the full structured status for richer UI (new model)
       status: {
         delivered: deliveredStep,
-        acceptedInCtt: acceptedInCtt,
+        acceptedInCtt,
         accepted: acceptedStep,
         in_transit: inTransitStep,
         wating_to_Be_Delivered: waitingStep,
       },
 
-      // Helpful ordered list for timelines/progress bars
       status_steps: [
-        { key: "acceptedInCtt",          ...acceptedInCtt,        label: "Accepted in CTT" },
-        { key: "accepted",               ...acceptedStep,         label: "Accepted" },
-        { key: "in_transit",             ...inTransitStep,        label: "In Transit" },
-        { key: "wating_to_Be_Delivered", ...waitingStep,          label: "Waiting to be Delivered" },
-        { key: "delivered",              ...deliveredStep,        label: "Delivered" },
+        { key: "acceptedInCtt", ...acceptedInCtt, label: "Accepted in CTT" },
+        { key: "accepted", ...acceptedStep, label: "Accepted" },
+        { key: "in_transit", ...inTransitStep, label: "In Transit" },
+        {
+          key: "wating_to_Be_Delivered",
+          ...waitingStep,
+          label: "Waiting to be Delivered",
+        },
+        { key: "delivered", ...deliveredStep, label: "Delivered" },
       ],
     };
   });

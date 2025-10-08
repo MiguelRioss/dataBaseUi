@@ -1,7 +1,7 @@
 import React from "react";
 import ObjectPopup from "./ObjectPopup";
-import ShipmentStatusView from "./ShipmentStatusView";
-import ClickableBadge from "./ClicableBadge";
+import ShipmentStatusView from "../ShipmentStatusView";
+import ClickableBadge from "../ClicableBadge";
 
 /**
  * StatusPopup
@@ -122,14 +122,6 @@ export default function StatusPopup({
                   falseText="In transit"
                 />
                 <ClickableBadge
-                  ok={edit.delivered}
-                  onToggle={() =>
-                    setEdit((prev) => ({ ...prev, delivered: !prev.delivered }))
-                  }
-                  trueText="Delivered"
-                  falseText="Delivered"
-                />
-                <ClickableBadge
                   ok={edit.acceptedInCtt}
                   onToggle={() =>
                     setEdit((prev) => ({
@@ -150,6 +142,14 @@ export default function StatusPopup({
                   }
                   trueText="Waiting"
                   falseText="Waiting"
+                />
+                <ClickableBadge
+                  ok={edit.delivered}
+                  onToggle={() =>
+                    setEdit((prev) => ({ ...prev, delivered: !prev.delivered }))
+                  }
+                  trueText="Delivered"
+                  falseText="Delivered"
                 />
               </div>
 

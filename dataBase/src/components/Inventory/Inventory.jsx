@@ -2,7 +2,8 @@ import React from "react";
 import fetchStock, {
   updateStockAPI,
   adjustStockAPI,
-} from "../services/StockAPIuse";
+} from "../services/StockAPI";
+import { resolveApiBase } from "../services/apiBase";
 
 /**
  * Inventory (self-fetching)
@@ -16,8 +17,15 @@ export default function Inventory({
   step = 1,
   min = 0,
   max = 9999,
-  apiBase = (import.meta.env?.VITE_API_BASE_URL || "").replace(/\/$/, ""),
+  apiBase: apiBaseProp,
 }) {
+  const apiBase = React.useMemo(
+    () =>
+      apiBaseProp && apiBaseProp.trim()
+        ? apiBaseProp.trim().replace(/\/$/, "")
+        : resolveApiBase(),
+    [apiBaseProp]
+  );
   const API_URL = `${apiBase}/api/stock`;
 
   const [rows, setRows] = React.useState(() => normalize(initial));
@@ -34,7 +42,7 @@ export default function Inventory({
       setLoading(true);
       setError("");
       try {
-        const data = await fetchStock();
+        const data = await fetchStock({ apiBase });
         const payload =
           data && typeof data === "object"
             ? Array.isArray(data.items)
@@ -72,7 +80,7 @@ export default function Inventory({
       );
 
       const row = updatedRows[i];
-      updateStockAPI(row.id, { stockValue: n }, apiBase) // ✅ use id
+      updateStockAPI(row.id, { stockValue: n }, apiBase)
         .then((result) => console.log("Updated stock:", result))
         .catch((err) => setError(err.message || String(err)));
 
@@ -89,7 +97,7 @@ export default function Inventory({
       );
 
       const row = updatedRows[i];
-      adjustStockAPI(row.id, delta, apiBase) // ✅ use id
+      adjustStockAPI(row.id, delta, apiBase)
         .then((result) => console.log("Adjusted stock:", result))
         .catch((err) => setError(err.message || String(err)));
 

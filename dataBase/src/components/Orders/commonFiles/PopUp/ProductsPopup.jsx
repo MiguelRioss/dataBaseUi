@@ -1,6 +1,6 @@
-import ObjectPopup from ".//ObjectPopup";
-import ItemsList from "./ItemsList"
-import {formatCents} from ".//utils"
+import ObjectPopup from "./ObjectPopup";
+import ItemsList from "./utils/ItemsList";
+import { formatCents } from "./utils/utils";
 
 /**
  * ProductsPopup
@@ -18,11 +18,13 @@ import {formatCents} from ".//utils"
  *  - title?: string
  */
 export default function ProductsPopup({
+  shipping_cost_cents,
   items = [],
   currency = "eur",
   buttonText = "View products",
   title = "Products",
 }) {
+  console.log("Shipping cost cents:", shipping_cost_cents);
   const cur = (items[0]?.currency || currency || "eur").toLowerCase();
   // compute totals safely
   const totalItems = items.reduce((n, it) => n + (Number(it.quantity) || 0), 0);
@@ -34,9 +36,10 @@ export default function ProductsPopup({
   }, 0);
 
   const data = {
-    items,                         // custom-rendered below
+    items, // custom-rendered below
     total_items: totalItems,
     subtotal: formatCents(subtotalCents, cur),
+    shipping: shipping_cost_cents,
     currency: cur.toUpperCase(),
   };
 
@@ -49,13 +52,18 @@ export default function ProductsPopup({
         {
           key: "items",
           label: "Products",
-          render: (val /* = items */) => <ItemsList items={items} currency={cur} />,
+          render: (val /* = items */) => (
+            <ItemsList items={items} currency={cur} />
+          ),
         },
         { key: "total_items", label: "Total items" },
-        { key: "subtotal",    label: "Subtotal"    },
+        {
+          key: "shipping",
+          label: "Shipping Cost",
+          render: (val) => formatCents(val, cur),
+        },
+        { key: "subtotal", label: "Subtotal" },
       ]}
     />
   );
 }
-
-

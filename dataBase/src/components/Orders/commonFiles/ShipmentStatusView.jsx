@@ -41,7 +41,6 @@ function whenCell({ date, time }) {
 
 export default function ShipmentStatusView({ status }) {
   const norm = normalizeStatus(status);
-  console.log("status",norm)
 
   return (
     <div className="status-table-wrap">

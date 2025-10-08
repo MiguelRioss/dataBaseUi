@@ -1,4 +1,3 @@
-import React from "react";
 
 /**
  * Small badge component used to show ok / no states.

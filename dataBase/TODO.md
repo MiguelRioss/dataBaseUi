@@ -15,4 +15,4 @@
 * [ ] Now inport the excell file to the data base and see imports working 
 * [ ] Only go fetch data that is not delivered yet to not spend so much time
   
-  
+
