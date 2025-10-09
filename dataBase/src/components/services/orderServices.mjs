@@ -49,7 +49,7 @@ export async function updateTrackUrl(orderId, trackUrl) {
 }
 
 // Create a new order and return the raw payload from the API
-export async function createOrder(order) {
+export async function createOrderServices(order) {
   const response = await createOrder(order);
   return response?.order ?? response;
 }
