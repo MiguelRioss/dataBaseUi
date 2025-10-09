@@ -24,7 +24,6 @@ export default function ProductsPopup({
   buttonText = "View products",
   title = "Products",
 }) {
-  console.log("Shipping cost cents:", shippingCost);
   const cur = (items[0]?.currency || currency || "eur").toLowerCase();
   // compute totals safely
   const totalItems = items.reduce((n, it) => n + (Number(it.quantity) || 0), 0);

@@ -22,7 +22,6 @@ export default function OrderRow({
   onToggleDelivered, // (orderId, nextVal:boolean) => Promise<void>
 }) {
   const deliveredOk = !!row?.status?.delivered?.status;
-  console.log("Shipping cost:", row?.shippingCost);
   return (
     <tr key={row.id}>
       <td data-mono>{row.id}</td>
@@ -84,6 +83,10 @@ export default function OrderRow({
             Edit
           </button>
         ) : null}
+
+         <button className="btn" onClick={{}} disabled={row.id != "RT"}>
+            Send Email to Customer 
+          </button>
       </td>
 
       {/* STATUS POPUP — now receives a save handler */}

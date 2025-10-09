@@ -225,7 +225,7 @@ export default function Orders() {
                     onToggle={toggleSort}
                   />
                   <th>Track URL</th>
-                  <th style={{ width: 240 }}>Actions</th>
+                  <th >Actions</th>
                   <SortableTh
                     label="Status"
                     colKey="status"
