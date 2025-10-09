@@ -22,13 +22,16 @@ export default function OrderRow({
   onToggleDelivered, // (orderId, nextVal:boolean) => Promise<void>
 }) {
   const deliveredOk = !!row?.status?.delivered?.status;
-    
+  const paymentId =
+    row?.payment_id ??
+    row?.metadata?.payment_id ??
+    row?.metadata?.paymentId ??
+    "";
   return (
     <tr key={row.id}>
       <td data-mono>{row.id}</td>
-      <td>{row.payment_id ? row.payment_id : <span className="muted">-</span>}</td>
       <td style={{ whiteSpace: "nowrap" }}>
-        {row.date ? row.date.toLocaleString() : "-"}
+        {row.date ? row.date.toLocaleString() : "—"}
       </td>
       <td>{row.name}</td>
       <td className="muted">{row.email}</td>
@@ -60,6 +63,7 @@ export default function OrderRow({
       </td>
 
       <td>{centsToEUR(row.amount)}</td>
+      <td>{paymentId ? paymentId : <span className="muted">—</span>}</td>
 
       {/* Track URL (editable) */}
       <td className="wrap">
@@ -126,3 +130,4 @@ export default function OrderRow({
     </tr>
   );
 }
+

@@ -4,8 +4,8 @@ import Badge from "./Badge";
 const STATUS_STEPS = [
   { key: "accepted", label: "Accepted" },
   { key: "in_transit", label: "In Transit" },
-  { key: "acceptedInCtt", label: "Accepted IN CTT" },
-  { key: "wating_to_Be_Delivered", label: "Waiting to Be Delivered" },
+  { key: "acceptedInCtt", label: "Accepted in CTT" },
+  { key: "waiting_to_be_delivered", label: "Waiting to Be Delivered" },
   { key: "delivered", label: "Delivered" },
 ];
 
@@ -15,14 +15,15 @@ function normalizeStatus(raw) {
     obj && typeof obj === "object" && !Array.isArray(obj) ? obj : {};
   const s = safe(raw);
 
-  // Accept legacy alias "in_traffic"
   const inTransit = safe(s.in_transit ?? s.in_traffic);
 
   return {
     accepted: safe(s.accepted),
     in_transit: inTransit,
     acceptedInCtt: safe(s.acceptedInCtt),
-    wating_to_Be_Delivered: safe(s.wating_to_Be_Delivered),
+    waiting_to_be_delivered: safe(
+      s.waiting_to_be_delivered ?? s.wating_to_Be_Delivered
+    ),
     delivered: safe(s.delivered),
   };
 }
@@ -73,9 +74,6 @@ export default function ShipmentStatusView({ status }) {
           })}
         </tbody>
       </table>
-
-      {/* lightweight scoped styles; adapt to your design system if you prefer */}
-    
     </div>
   );
 }

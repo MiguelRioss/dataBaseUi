@@ -38,23 +38,45 @@ export default function Orders() {
   }, [load]);
 
   // ------- UPDATE STATUS -------
+  const normalizeStatusPatch = (patch = {}) => {
+    const normalized = { ...patch };
+    if (
+      Object.prototype.hasOwnProperty.call(
+        normalized,
+        "wating_to_Be_Delivered"
+      ) &&
+      !Object.prototype.hasOwnProperty.call(
+        normalized,
+        "waiting_to_be_delivered"
+      )
+    ) {
+      normalized.waiting_to_be_delivered =
+        normalized.wating_to_Be_Delivered;
+    }
+    delete normalized.wating_to_Be_Delivered;
+    return normalized;
+  };
+
   async function handleUpdateStatus(orderId, flatPatch) {
+    const normalizedPatch = normalizeStatusPatch(flatPatch);
     try {
-      await updateOrderStatus(orderId, flatPatch);
+      await updateOrderStatus(orderId, normalizedPatch);
       setRows((prev) =>
         prev.map((r) =>
           r.id === orderId
             ? {
                 ...r,
-                status: {
-                  ...r.status,
-                  ...Object.fromEntries(
-                    Object.entries(flatPatch).map(([k, v]) => [
-                      k,
-                      { status: !!v },
-                    ])
-                  ),
-                },
+                status: ((currentStatus) => {
+                  const nextStatus = { ...currentStatus };
+                  delete nextStatus.wating_to_Be_Delivered;
+                  Object.entries(normalizedPatch).forEach(([key, value]) => {
+                    nextStatus[key] = {
+                      ...(nextStatus[key] ?? {}),
+                      status: !!value,
+                    };
+                  });
+                  return nextStatus;
+                })(r.status || {}),
               }
             : r
         )
@@ -71,15 +93,32 @@ export default function Orders() {
           in_transit: true,
           delivered: true,
           acceptedInCtt: true,
-          wating_to_Be_Delivered: true,
+          waiting_to_be_delivered: true,
         }
       : { delivered: false };
     return handleUpdateStatus(orderId, flat);
   }
 
+  const handleSendEmail = React.useCallback(
+    (order) => {
+      if (!order?.email) {
+        setError("Customer email is missing for this order.");
+        return;
+      }
+      setError("");
+      const subject = encodeURIComponent(`Order ${order?.id ?? ""} update`);
+      const href = `mailto:${order.email}?subject=${subject}`;
+      if (typeof window !== "undefined") {
+        window.open(href, "_blank", "noopener,noreferrer");
+      }
+    },
+    [setError]
+  );
+
   // ------- SAVE TRACK URL -------
   async function handleSaveTrackUrl(id, trackUrl) {
     try {
+      console.log(trackUrl)
       setSavingId(id);
       await updateTrackUrl(id, trackUrl);
       setRows((prev) =>
@@ -114,7 +153,7 @@ export default function Orders() {
       const withoutDupes = prev.filter((row) => row.id !== mapped.id);
       return [mapped, ...withoutDupes];
     });
-  }, []);
+}, []);
 
   // ------- SORTING -------
   const SORT_KEYS = {
@@ -122,6 +161,7 @@ export default function Orders() {
     date: (r) => (r.date instanceof Date ? r.date.getTime() : 0),
     customer: (r) => (r.name || "").toLowerCase(),
     email: (r) => (r.email || "").toLowerCase(),
+    payment: (r) => String(r.payment_id || "").toLowerCase(),
     price: (r) => (Number.isFinite(r.amount) ? r.amount : 0),
     status: (r) => {
       const deliveredRank = r?.status?.delivered?.status ? 0 : 1;
@@ -199,6 +239,12 @@ export default function Orders() {
                     onToggle={toggleSort}
                   />
                   <SortableTh
+                    label="Payment ID"
+                    colKey="payment"
+                    sort={sort}
+                    onToggle={toggleSort}
+                  />
+                  <SortableTh
                     label="Date"
                     colKey="date"
                     sort={sort}
@@ -258,6 +304,7 @@ export default function Orders() {
                     saving={savingId === r.id}
                     onUpdateStatus={handleUpdateStatus}
                     onToggleDelivered={handleToggleDelivered}
+                    onSendEmail={handleSendEmail}
                   />
                 ))}
               </tbody>

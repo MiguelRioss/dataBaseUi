@@ -12,14 +12,14 @@ import ClickableBadge from "../ClicableBadge";
  *      in_transit?: any,
  *      delivered?: any,
  *      acceptedInCtt?: any,
- *      wating_to_Be_Delivered?: any,
+ *      waiting_to_be_delivered?: any,
  *    }
  *  - onSave?: (patch: {
  *      accepted?: boolean,
  *      in_transit?: boolean,
  *      delivered?: boolean,
  *      acceptedInCtt?: boolean,
- *      wating_to_Be_Delivered?: boolean,
+ *      waiting_to_be_delivered?: boolean,
  *    }) => (void|Promise<void>)
  *  - title?: string
  *  - buttonText?: string
@@ -38,7 +38,9 @@ export default function StatusPopup({
     in_transit: toBool(status.in_transit),
     delivered: toBool(status.delivered),
     acceptedInCtt: toBool(status.acceptedInCtt),
-    wating_to_Be_Delivered: toBool(status.wating_to_Be_Delivered),
+    waiting_to_be_delivered: toBool(
+      status.waiting_to_be_delivered ?? status.wating_to_Be_Delivered
+    ),
   };
 
   const [edit, setEdit] = React.useState(initial);
@@ -52,13 +54,16 @@ export default function StatusPopup({
       in_transit: toBool(status.in_transit),
       delivered: toBool(status.delivered),
       acceptedInCtt: toBool(status.acceptedInCtt),
-      wating_to_Be_Delivered: toBool(status.wating_to_Be_Delivered),
+      waiting_to_be_delivered: toBool(
+        status.waiting_to_be_delivered ?? status.wating_to_Be_Delivered
+      ),
     });
   }, [
     status.accepted,
     status.in_transit,
     status.delivered,
     status.acceptedInCtt,
+    status.waiting_to_be_delivered,
     status.wating_to_Be_Delivered,
   ]);
 
@@ -82,7 +87,8 @@ export default function StatusPopup({
     in_transit: status.in_transit,
     delivered: status.delivered,
     acceptedInCtt: status.acceptedInCtt,
-    wating_to_Be_Delivered: status.wating_to_Be_Delivered,
+    waiting_to_be_delivered:
+      status.waiting_to_be_delivered ?? status.wating_to_Be_Delivered,
   };
 
   return (
@@ -133,11 +139,11 @@ export default function StatusPopup({
                   falseText="Accepted in CTT"
                 />
                 <ClickableBadge
-                  ok={edit.wating_to_Be_Delivered}
+                  ok={edit.waiting_to_be_delivered}
                   onToggle={() =>
                     setEdit((prev) => ({
                       ...prev,
-                      wating_to_Be_Delivered: !prev.wating_to_Be_Delivered,
+                      waiting_to_be_delivered: !prev.waiting_to_be_delivered,
                     }))
                   }
                   trueText="Waiting"

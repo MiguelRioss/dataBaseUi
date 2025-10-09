@@ -37,6 +37,14 @@ export function mapDbToRows(valObj = {}) {
 
     const email = v.email;
     const shippingCost = meta.shipping_cost_cents;
+    const rawPaymentId =
+      meta.payment_id ??
+      meta.paymentId ??
+      (typeof v?.payment_id === "string" ? v.payment_id : "");
+    const paymentId =
+      rawPaymentId != null && rawPaymentId !== ""
+        ? String(rawPaymentId).trim()
+        : "";
     if (!shipping_address.full_name) shipping_address.full_name = fullName;
     if (!shipping_address.phone) shipping_address.phone = phone;
     if (!shipping_address.email) shipping_address.email = email;
@@ -66,15 +74,25 @@ export function mapDbToRows(valObj = {}) {
       };
     };
 
+    const stepWithFallback = (...keys) => {
+      for (const key of keys) {
+        if (key in statusObj) return step(key);
+      }
+      return { status: false, date: null, time: null };
+    };
+
     const deliveredStep = step("delivered");
     const acceptedInCtt = step("acceptedInCtt");
     const acceptedStep = step("accepted");
     const inTransitStep = step("in_transit");
-    const waitingStep = step("wating_to_Be_Delivered");
+    const waitingStep = stepWithFallback(
+      "waiting_to_be_delivered",
+      "wating_to_Be_Delivered"
+    );
 
     // --- Final mapped object ---
     return {
-      id : v.id,
+      id: v.id,
       date: v?.written_at ? new Date(v.written_at) : null,
       name: fullName,
       email,
@@ -84,16 +102,18 @@ export function mapDbToRows(valObj = {}) {
       shipping_address,
       billing_address,
       track_url: v?.track_url ?? "",
+      payment_id: paymentId,
       items: Array.isArray(v?.items) ? v.items : [],
       fulfilled: !!v?.fulfilled,
       email_sent: !!(v?.email_sent ?? v?.email_sended),
+      metadata: meta,
 
       status: {
         delivered: deliveredStep,
         acceptedInCtt,
         accepted: acceptedStep,
         in_transit: inTransitStep,
-        wating_to_Be_Delivered: waitingStep,
+        waiting_to_be_delivered: waitingStep,
       },
 
       status_steps: [
@@ -101,7 +121,7 @@ export function mapDbToRows(valObj = {}) {
         { key: "accepted", ...acceptedStep, label: "Accepted" },
         { key: "in_transit", ...inTransitStep, label: "In Transit" },
         {
-          key: "wating_to_Be_Delivered",
+          key: "waiting_to_be_delivered",
           ...waitingStep,
           label: "Waiting to be Delivered",
         },

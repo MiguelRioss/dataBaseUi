@@ -304,17 +304,17 @@ export default function NewOrderPopup({ onCreate }) {
       phone: form.phone,
       amount_total: totalCents,
       currency: form.currency,
+      payment_id: form.payment_id,
       items: cleanedItems,
       status: {
         accepted: { status: false },
         in_transit: { status: false },
         delivered: { status: false },
         acceptedInCtt: { status: false },
-        wating_to_Be_Delivered: { status: false },
+        waiting_to_be_delivered: { status: false },
       },
       metadata: {
         payment_provider: form.payment_provider,
-        payment_id: form.payment_id,
         billing_same_as_shipping: sameAsShipping,
         shipping_address: shippingAddress,
         billing_address: billingAddress,
@@ -464,7 +464,9 @@ export default function NewOrderPopup({ onCreate }) {
                       className="new-order-input"
                       placeholder="Enter payment reference"
                       value={form.payment_id}
-                      onChange={(e) => handleChange("payment_id", e.target.value)}
+                      onChange={(e) =>
+                        handleChange("payment_id", e.target.value)
+                      }
                     />
                   </label>
                 </div>

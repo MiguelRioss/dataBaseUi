@@ -10,7 +10,7 @@
         in_transit: { status: false },
         delivered: { status: false },
         acceptedInCtt: { status: false },
-        wating_to_Be_Delivered: { status: false },
+        waiting_to_be_delivered: { status: false },
       },
       metadata: {
         phone: form.phone,

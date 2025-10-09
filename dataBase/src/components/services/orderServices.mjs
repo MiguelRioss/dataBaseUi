@@ -27,21 +27,37 @@ export async function getAllOrders(limit = 100) {
   );
 }
 
-export async function updateOrderStatus(orderId, flatPatch) {
-  const wrap = (v) => ({ status: !!v });
-  const changes = {
-    status: {
-      accepted: wrap(flatPatch.accepted),
-      in_transit: wrap(flatPatch.in_transit),
-      delivered: wrap(flatPatch.delivered),
-      acceptedInCtt: wrap(flatPatch.acceptedInCtt),
-      waiting_to_be_delivered: wrap(flatPatch.waiting_to_be_delivered),
-    },
+export async function updateOrderStatus(orderId, flatPatch = {}) {
+  const wrap = (value) =>
+    value === undefined ? undefined : { status: !!value };
+
+  const statusChanges = {};
+  const assign = (key, value) => {
+    const wrapped = wrap(value);
+    if (wrapped !== undefined) {
+      statusChanges[key] = wrapped;
+    }
   };
-  return patchOrder(orderId, changes);
+
+  assign("accepted", flatPatch.accepted);
+  assign("in_transit", flatPatch.in_transit);
+  assign("delivered", flatPatch.delivered);
+  assign("acceptedInCtt", flatPatch.acceptedInCtt);
+
+  const waitingValue =
+    flatPatch.waiting_to_be_delivered ?? flatPatch.wating_to_Be_Delivered;
+  if (waitingValue !== undefined) {
+    statusChanges.waiting_to_be_delivered = { status: !!waitingValue };
+    statusChanges.wating_to_Be_Delivered = { status: !!waitingValue };
+  }
+
+  if (Object.keys(statusChanges).length === 0) return;
+
+  return patchOrder(orderId, { status: statusChanges });
 }
 
 export async function updateTrackUrl(orderId, trackUrl) {
+  console.log("Updating track URL:", { orderId, trackUrl });
   return patchOrder(orderId, { track_url: trackUrl });
 }
 

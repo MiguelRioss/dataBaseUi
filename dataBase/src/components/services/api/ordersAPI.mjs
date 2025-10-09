@@ -29,7 +29,7 @@ export async function patchOrder(id, changes) {
   const res = await fetch(`${API_BASE}/api/orders/${encodeURIComponent(id)}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(changes),
+    body: JSON.stringify({changes}),
   });
   if (!res.ok) {
     let msg = `HTTP ${res.status}`;
