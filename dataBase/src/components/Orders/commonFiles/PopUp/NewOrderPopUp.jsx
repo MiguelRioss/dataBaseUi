@@ -297,11 +297,12 @@ export default function NewOrderPopup({ onCreate }) {
 
     const shippingCostCents = euroStringToCents(form.shipping_cost);
     const totalCents = calculateOrderTotalCents(form.items, form.shipping_cost);
+    const fullPhone = form.phonePrefix + form.phone;
 
     const payload = {
       name: form.name,
       email: form.email,
-      phone: form.phone,
+      phone: fullPhone,
       amount_total: totalCents,
       currency: form.currency,
       payment_id: form.payment_id,
