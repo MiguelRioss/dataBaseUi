@@ -667,25 +667,23 @@ export default function NewOrderPopup({ onCreate }) {
 }
 
 function PaymentOptionButton({ label, selected, onSelect, Icon }) {
-  const baseClasses =
-    "flex items-center gap-3 rounded-lg border px-3 py-2 text-sm transition-all focus:outline-none focus:ring-2 focus:ring-green-500/40";
-  const stateClasses = selected
-    ? "border-green-500 bg-green-500/10 text-white shadow"
-    : "border-gray-700 bg-gray-900/60 text-gray-200 hover:border-gray-500 hover:bg-gray-900/80";
-
   const handleClick = () => {
     if (!selected) onSelect?.();
   };
+
+  const classes = `btn btn--ghost new-order-payment-option${
+    selected ? " is-selected" : ""
+  }`;
 
   return (
     <button
       type="button"
       onClick={handleClick}
       aria-pressed={selected}
-      className={`${baseClasses} ${stateClasses}`}
+      className={classes}
     >
-      {Icon ? <Icon className="h-6 w-6 shrink-0" /> : null}
-      <span className="font-medium">{label}</span>
+      {Icon ? <Icon className="new-order-payment-option__icon" /> : null}
+      <span className="new-order-payment-option__label">{label}</span>
     </button>
   );
 }
