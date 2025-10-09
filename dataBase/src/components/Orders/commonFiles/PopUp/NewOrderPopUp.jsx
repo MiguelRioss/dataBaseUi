@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect } from "react";
 import ModalPortal from "./ModalPortal";
 import fetchStock from "../../../services/StockAPI";
-import { createOrder as createOrderService } from "../../../services/orderServices.mjs";
+import { createOrderServices } from "../../../services/orderServices.mjs";
 
 const SEGMENT_IS_INDEX = /^\d+$/;
 const EUR_FORMATTER = new Intl.NumberFormat("en-IE", {
@@ -311,7 +311,7 @@ export default function NewOrderPopup({ onCreate }) {
     setSubmitError("");
     setSaving(true);
     try {
-      const createdOrder = await createOrderService(payload);
+      const createdOrder = await createOrderServices(payload);
       if (!createdOrder?.id)
         throw new Error("Order API did not return an order id.");
       onCreate?.(createdOrder);
