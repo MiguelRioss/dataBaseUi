@@ -62,10 +62,14 @@ const calculateOrderTotalCents = (items = [], shippingCost = "0") =>
   calculateItemsTotalCents(items) + euroStringToCents(shippingCost);
 
 const createEmptyAddress = () => ({
+  name: "",
   line1: "",
+  line2: "",
   city: "",
+  state: "",
   postal_code: "",
   country: "",
+  phone: "",
 });
 
 const createEmptyItem = () => ({
@@ -83,11 +87,30 @@ const createInitialForm = () => ({
   phoneNumber: "",
   amount_total: "0",
   currency: "EUR",
+  payment_provider: "revolut",
+  payment_id: "",
   shipping_cost: "0",
   shipping_address: createEmptyAddress(),
   billing_address: createEmptyAddress(),
   items: [createEmptyItem()],
 });
+
+const PAYMENT_OPTIONS = [
+  { label: "Revolut", value: "revolut", Icon: RevolutIcon },
+  { label: "Wise", value: "wise", Icon: WiseIcon },
+  { label: "Bank Transfer", value: "bank_transfer", Icon: BankTransferIcon },
+];
+
+const ADDRESS_FIELD_CONFIG = [
+  { key: "name", label: "Contact Name" },
+  { key: "line1", label: "Address Line 1" },
+  { key: "line2", label: "Address Line 2", optional: true },
+  { key: "city", label: "City" },
+  { key: "state", label: "State / Region" },
+  { key: "postal_code", label: "Postal Code" },
+  { key: "country", label: "Country" },
+  { key: "phone", label: "Phone", type: "tel" },
+];
 
 export default function NewOrderPopup({ onCreate }) {
   const [open, setOpen] = useState(false);
@@ -296,6 +319,8 @@ export default function NewOrderPopup({ onCreate }) {
 
         full_name: form.name,
         email: form.email,
+        payment_provider: form.payment_provider,
+        payment_id: form.payment_id,
         billing_same_as_shipping: sameAsShipping,
         shipping_address: shippingAddress,
         billing_address: billingAddress,
@@ -427,6 +452,31 @@ export default function NewOrderPopup({ onCreate }) {
                   value={form.amount_total}
                   onChange={(e) => handleChange("amount_total", e.target.value)}
                 />
+                <div className="new-order-field new-order-field--full">
+                  <span className="new-order-label">Payment Method</span>
+                  <div className="flex flex-wrap gap-3">
+                    {PAYMENT_OPTIONS.map(({ label, value, Icon }) => (
+                      <PaymentOptionButton
+                        key={value}
+                        label={label}
+                        selected={form.payment_provider === value}
+                        onSelect={() => handleChange("payment_provider", value)}
+                        Icon={Icon}
+                      />
+                    ))}
+                  </div>
+
+                  <label className="new-order-field mt-4 block">
+                    <span className="new-order-label">Payment ID</span>
+                    <input
+                      type="text"
+                      className="new-order-input"
+                      placeholder="Enter payment reference"
+                      value={form.payment_id}
+                      onChange={(e) => handleChange("payment_id", e.target.value)}
+                    />
+                  </label>
+                </div>
               </div>
             </Section>
             <Section title="Items">
@@ -541,13 +591,14 @@ export default function NewOrderPopup({ onCreate }) {
             {/*────────────────────────────*/}
             <Section title="Shipping Address">
               <div className="new-order-grid">
-                {["line1", "city", "postal_code", "country"].map((f) => (
+                {ADDRESS_FIELD_CONFIG.map(({ key, label, type, optional }) => (
                   <Input
-                    key={f}
-                    label={f.replace("_", " ").toUpperCase()}
-                    value={form.shipping_address[f]}
+                    key={key}
+                    label={optional ? `${label} (optional)` : label}
+                    type={type}
+                    value={form.shipping_address[key]}
                     onChange={(e) =>
-                      handleChange(`shipping_address.${f}`, e.target.value)
+                      handleChange(`shipping_address.${key}`, e.target.value)
                     }
                   />
                 ))}
@@ -572,16 +623,22 @@ export default function NewOrderPopup({ onCreate }) {
 
                 {!sameAsShipping && (
                   <div className="new-order-grid">
-                    {["line1", "city", "postal_code", "country"].map((f) => (
-                      <Input
-                        key={f}
-                        label={f.replace("_", " ").toUpperCase()}
-                        value={form.billing_address[f]}
-                        onChange={(e) =>
-                          handleChange(`billing_address.${f}`, e.target.value)
-                        }
-                      />
-                    ))}
+                    {ADDRESS_FIELD_CONFIG.map(
+                      ({ key, label, type, optional }) => (
+                        <Input
+                          key={key}
+                          label={optional ? `${label} (optional)` : label}
+                          type={type}
+                          value={form.billing_address[key]}
+                          onChange={(e) =>
+                            handleChange(
+                              `billing_address.${key}`,
+                              e.target.value
+                            )
+                          }
+                        />
+                      )
+                    )}
                   </div>
                 )}
               </div>
@@ -606,6 +663,78 @@ export default function NewOrderPopup({ onCreate }) {
         </div>
       </ModalPortal>
     </>
+  );
+}
+
+function PaymentOptionButton({ label, selected, onSelect, Icon }) {
+  const baseClasses =
+    "flex items-center gap-3 rounded-lg border px-3 py-2 text-sm transition-all focus:outline-none focus:ring-2 focus:ring-green-500/40";
+  const stateClasses = selected
+    ? "border-green-500 bg-green-500/10 text-white shadow"
+    : "border-gray-700 bg-gray-900/60 text-gray-200 hover:border-gray-500 hover:bg-gray-900/80";
+
+  const handleClick = () => {
+    if (!selected) onSelect?.();
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={handleClick}
+      aria-pressed={selected}
+      className={`${baseClasses} ${stateClasses}`}
+    >
+      {Icon ? <Icon className="h-6 w-6 shrink-0" /> : null}
+      <span className="font-medium">{label}</span>
+    </button>
+  );
+}
+
+function RevolutIcon({ className = "h-6 w-6" }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className={className}
+      aria-hidden="true"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        fill="#001AEE"
+        d="M20.9133 6.9566C20.9133 3.1208 17.7898 0 13.9503 0H2.424v3.8605h10.9782c1.7376 0 3.177 1.3651 3.2087 3.043.016.84-.2994 1.633-.8878 2.2324-.5886.5998-1.375.9303-2.2144.9303H9.2322a.2756.2756 0 0 0-.2755.2752v3.431c0 .0585.018.1142.052.1612L16.2646 24h5.3114l-7.2727-10.094c3.6625-.1838 6.61-3.2612 6.61-6.9494zM6.8943 5.9229H2.424V24h4.4704z"
+      />
+    </svg>
+  );
+}
+
+function WiseIcon({ className = "h-6 w-6" }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className={className}
+      aria-hidden="true"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        fill="#00B9FF"
+        d="M6.488 7.469 0 15.05h11.585l1.301-3.576H7.922l3.033-3.507.01-.092L8.993 4.48h8.873l-6.878 18.925h4.706L24 .595H2.543l3.945 6.874Z"
+      />
+    </svg>
+  );
+}
+
+function BankTransferIcon({ className = "h-6 w-6" }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className={className}
+      aria-hidden="true"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        fill="#38BDF8"
+        d="M12 2 2 6.5v2h20v-2L12 2zm-8 9v7h2v-7H4zm4 0v7h2v-7H8zm4 0v7h2v-7h-2zm4 0v7h2v-7h-2zm4 0v7h2v-7h-2zM3 20v2h18v-2H3z"
+      />
+    </svg>
   );
 }
 
