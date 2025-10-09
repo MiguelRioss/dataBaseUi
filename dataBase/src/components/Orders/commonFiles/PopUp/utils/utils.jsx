@@ -47,7 +47,6 @@ export function mapDbToRows(valObj = {}) {
 
     // --- Fallback address shape if no structured one exists ---
 
-    const address = v.address;
 
     // --- Structured status (unchanged) ---
     const statusObj =
@@ -75,7 +74,7 @@ export function mapDbToRows(valObj = {}) {
 
     // --- Final mapped object ---
     return {
-      id,
+      id : v.id,
       date: v?.written_at ? new Date(v.written_at) : null,
       name: fullName,
       email,

@@ -193,7 +193,7 @@ export default function Orders() {
               <thead>
                 <tr>
                   <SortableTh
-                    label="ID"
+                    label="Order ID"
                     colKey="id"
                     sort={sort}
                     onToggle={toggleSort}
