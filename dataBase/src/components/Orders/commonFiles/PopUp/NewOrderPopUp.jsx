@@ -294,7 +294,7 @@ export default function NewOrderPopup({ onCreate }) {
       metadata: {
         phone: form.phone,
 
-        full_name: form.name,
+        name: form.name,
         email: form.email,
         billing_same_as_shipping: sameAsShipping,
         shipping_address: shippingAddress,

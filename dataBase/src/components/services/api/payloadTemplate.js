@@ -1,0 +1,28 @@
+ const payload = {
+      name: form.name,
+      email: form.email,
+      phone: form.phone,
+      amount_total: totalCents,
+      currency: form.currency,
+      items: cleanedItems,
+      status: {
+        accepted: { status: false },
+        in_transit: { status: false },
+        delivered: { status: false },
+        acceptedInCtt: { status: false },
+        wating_to_Be_Delivered: { status: false },
+      },
+      metadata: {
+        phone: form.phone,
+        name: form.name,
+        email: form.email,
+        billing_same_as_shipping: sameAsShipping,
+        shipping_address: shippingAddress,
+        billing_address: billingAddress,
+        shipping_cost_cents: shippingCostCents,
+        notes: "",
+      },
+      fulfilled: false,
+      email_sent: false,
+      track_url: "",
+    };
