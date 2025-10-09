@@ -1,5 +1,5 @@
 // /services/ordersService.mjs
-import {fetchOrders,patchOrder, createOrder,} from "./api/ordersApi";
+import {fetchOrders,patchOrder, createOrder,} from "./api/ordersAPI.mjs";
 import { mapDbToRows } from "../Orders/commonFiles/PopUp/utils/utils";
 
 // Fetch and map all orders
