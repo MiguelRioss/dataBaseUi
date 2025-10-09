@@ -1,19 +1,17 @@
 ﻿// /services/api/ordersApi.mjs
 import { API_BASE } from "../apiBase";
 
-// GET all orders
 export async function fetchOrders({ limit = 100 } = {}) {
   const res = await fetch(`${API_BASE}/api/orders?limit=${limit}`);
   if (!res.ok) throw new Error(`Failed to fetch orders (${res.status})`);
-  return res.json(); // expected: { items: [...] }
+  return res.json();
 }
 
-// POST create order
 export async function createOrder(order) {
   const res = await fetch(`${API_BASE}/api/orders`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify( order ),
+    body: JSON.stringify(order),
   });
   if (!res.ok) {
     let msg = `HTTP ${res.status}`;
@@ -27,12 +25,11 @@ export async function createOrder(order) {
   return res.json();
 }
 
-// PATCH one order
 export async function patchOrder(id, changes) {
   const res = await fetch(`${API_BASE}/api/orders/${encodeURIComponent(id)}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ changes }),
+    body: JSON.stringify(changes),
   });
   if (!res.ok) {
     let msg = `HTTP ${res.status}`;
