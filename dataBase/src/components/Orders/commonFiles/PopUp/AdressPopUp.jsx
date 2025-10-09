@@ -2,13 +2,24 @@ import ObjectPopup from "./ObjectPopup";
 import { buildAddress } from "./utils/utils";
 
 function normalizeAddress(src = {}) {
+  const prefix =
+    typeof src.phone_prefix === "string" ? src.phone_prefix.trim() : "";
+  const number =
+    typeof src.phone_number === "string" ? src.phone_number.trim() : "";
+  const fullPhone =
+    prefix && number
+      ? `${prefix} ${number}`.trim()
+      : typeof src.phone === "string"
+      ? src.phone.trim()
+      : "";
+
   return {
-    line1: src.line1 ,
+    line1: src.line1,
     city: src.city,
-    postal_code: src.postal_code ,
-    country: src.country ,
-    full_name: src.full_name ,
-    phone: src.phone ,
+    postal_code: src.postal_code,
+    country: src.country,
+    full_name: src.full_name,
+    phone: fullPhone,
   };
 }
 
@@ -31,6 +42,8 @@ export default function AddressPopup({
   };
 
   const billingData = {
+    full_name: s.full_name,
+    phone: b.phone,
     line1: b.line1,
     city: b.city,
     postal_code: b.postal_code,
@@ -60,6 +73,8 @@ export default function AddressPopup({
           title: "Billing Address",
           data: billingData,
           fields: [
+             { key: "full_name", label: "Name" },
+            { key: "phone", label: "Phone" },
             { key: "line1", label: "Address" },
             { key: "city", label: "City" },
             { key: "postal_code", label: "Postal code" },

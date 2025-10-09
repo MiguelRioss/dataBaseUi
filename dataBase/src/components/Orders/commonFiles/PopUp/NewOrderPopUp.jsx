@@ -61,6 +61,8 @@ const calculateItemsTotalCents = (items = []) =>
 const calculateOrderTotalCents = (items = [], shippingCost = "0") =>
   calculateItemsTotalCents(items) + euroStringToCents(shippingCost);
 
+const DEFAULT_DIAL_CODE = "+351";
+
 const createEmptyAddress = () => ({
   name: "",
   line1: "",
@@ -69,6 +71,8 @@ const createEmptyAddress = () => ({
   postal_code: "",
   country: "",
   phone: "",
+  phone_prefix: DEFAULT_DIAL_CODE,
+  phone_number: "",
 });
 
 const createEmptyItem = () => ({
@@ -78,11 +82,70 @@ const createEmptyItem = () => ({
   unit_amount: "0",
 });
 
+const PHONE_SPLIT_REGEX = /^(\+\d{1,4})(?:\s*)(.*)$/;
+
+const splitPhoneValue = (phone = "") => {
+  const trimmed = String(phone ?? "").trim();
+  if (!trimmed) return { prefix: "", number: "" };
+  const match = trimmed.match(PHONE_SPLIT_REGEX);
+  if (match) {
+    return {
+      prefix: match[1] ?? "",
+      number: (match[2] ?? "").trim(),
+    };
+  }
+  return { prefix: "", number: trimmed };
+};
+
+const resolveAddressPhoneParts = (address = {}) => {
+  if (!address || typeof address !== "object") {
+    return { dialCode: DEFAULT_DIAL_CODE, number: "" };
+  }
+
+  const rawPrefix =
+    typeof address.phone_prefix === "string"
+      ? address.phone_prefix.trim()
+      : "";
+  const rawNumber =
+    typeof address.phone_number === "string"
+      ? address.phone_number.trim()
+      : "";
+
+  if (rawPrefix && rawNumber) {
+    return { dialCode: rawPrefix, number: rawNumber };
+  }
+
+  const parsed = splitPhoneValue(address.phone);
+  return {
+    dialCode: rawPrefix || parsed.prefix || DEFAULT_DIAL_CODE,
+    number: rawNumber || parsed.number || "",
+  };
+};
+
+const normalizeAddressPhone = (address = {}) => {
+  const base =
+    address && typeof address === "object" ? { ...address } : {};
+  const { dialCode, number } = resolveAddressPhoneParts(base);
+  const trimmedDial = dialCode || DEFAULT_DIAL_CODE;
+  const trimmedNumber = (number || "").trim();
+  const existingPhone = (base.phone || "").trim();
+  const phoneValue = trimmedNumber
+    ? `${trimmedDial} ${trimmedNumber}`.trim()
+    : existingPhone;
+
+  return {
+    ...base,
+    phone_prefix: trimmedDial,
+    phone_number: trimmedNumber,
+    phone: phoneValue,
+  };
+};
+
 const createInitialForm = () => ({
   name: "",
   email: "",
   phone: "",
-  phonePrefix: "+351",
+  phonePrefix: DEFAULT_DIAL_CODE,
   phoneNumber: "",
   amount_total: "0",
   currency: "EUR",
@@ -98,6 +161,16 @@ const PAYMENT_OPTIONS = [
   { label: "Revolut", value: "revolut", Icon: RevolutIcon },
   { label: "Wise", value: "wise", Icon: WiseIcon },
   { label: "Bank Transfer", value: "bank_transfer", Icon: BankTransferIcon },
+];
+
+const PHONE_DIAL_OPTIONS = [
+  { value: "+351", label: "PT (+351)" },
+  { value: "+44", label: "UK (+44)" },
+  { value: "+33", label: "FR (+33)" },
+  { value: "+34", label: "ES (+34)" },
+  { value: "+1", label: "US (+1)" },
+  { value: "+39", label: "IT (+39)" },
+  { value: "+49", label: "DE (+49)" },
 ];
 
 const ADDRESS_FIELD_CONFIG = [
@@ -257,7 +330,7 @@ export default function NewOrderPopup({ onCreate }) {
     if (checked) {
       setForm((prev) => ({
         ...prev,
-        billing_address: { ...prev.shipping_address },
+        billing_address: normalizeAddressPhone(prev.shipping_address),
       }));
     }
   };
@@ -283,10 +356,10 @@ export default function NewOrderPopup({ onCreate }) {
       return;
     }
 
-    const shippingAddress = { ...form.shipping_address };
+    const shippingAddress = normalizeAddressPhone(form.shipping_address);
     const billingAddress = sameAsShipping
-      ? { ...form.shipping_address }
-      : { ...form.billing_address };
+      ? normalizeAddressPhone(form.shipping_address)
+      : normalizeAddressPhone(form.billing_address);
 
     const cleanedItems = form.items.map((item) => ({
       ...item,
@@ -297,7 +370,7 @@ export default function NewOrderPopup({ onCreate }) {
 
     const shippingCostCents = euroStringToCents(form.shipping_cost);
     const totalCents = calculateOrderTotalCents(form.items, form.shipping_cost);
-    const fullPhone = form.phonePrefix + form.phone;
+    const fullPhone =  form.phone;
 
     const payload = {
       name: form.name,
@@ -381,7 +454,7 @@ export default function NewOrderPopup({ onCreate }) {
                   <div className="flex items-center gap-2">
                     <select
                       className="new-order-input w-24"
-                      value={form.phonePrefix || "+351"}
+                      value={form.phonePrefix || DEFAULT_DIAL_CODE}
                       onChange={(e) => {
                         const prefix = e.target.value;
                         const number = form.phoneNumber || "";
@@ -393,13 +466,11 @@ export default function NewOrderPopup({ onCreate }) {
                         }));
                       }}
                     >
-                      <option value="+351">🇵🇹 +351</option>
-                      <option value="+44">🇬🇧 +44</option>
-                      <option value="+33">🇫🇷 +33</option>
-                      <option value="+34">🇪🇸 +34</option>
-                      <option value="+1">🇺🇸 +1</option>
-                      <option value="+39">🇮🇹 +39</option>
-                      <option value="+49">🇩🇪 +49</option>
+                      {PHONE_DIAL_OPTIONS.map(({ value, label }) => (
+                        <option key={value} value={value}>
+                          {label}
+                        </option>
+                      ))}
                     </select>
                     <input
                       type="tel"
@@ -408,7 +479,7 @@ export default function NewOrderPopup({ onCreate }) {
                       value={form.phoneNumber || ""}
                       onChange={(e) => {
                         const number = e.target.value;
-                        const prefix = form.phonePrefix || "+351";
+                        const prefix = form.phonePrefix || DEFAULT_DIAL_CODE;
                         handleChange("phone", `${prefix} ${number}`.trim());
                         setForm((prev) => ({
                           ...prev,
@@ -585,17 +656,70 @@ export default function NewOrderPopup({ onCreate }) {
             {/*────────────────────────────*/}
             <Section title="Shipping Address">
               <div className="new-order-grid">
-                {ADDRESS_FIELD_CONFIG.map(({ key, label, type, optional }) => (
-                  <Input
-                    key={key}
-                    label={optional ? `${label} (optional)` : label}
-                    type={type}
-                    value={form.shipping_address[key]}
-                    onChange={(e) =>
-                      handleChange(`shipping_address.${key}`, e.target.value)
-                    }
-                  />
-                ))}
+                {ADDRESS_FIELD_CONFIG.map(({ key, label, type, optional }) => {
+                  if (key === "phone") {
+                    const { dialCode, number } = resolveAddressPhoneParts(
+                      form.shipping_address
+                    );
+                    return (
+                      <AddressPhoneField
+                        key="shipping-phone"
+                        label={optional ? `${label} (optional)` : label}
+                        dialCode={dialCode}
+                        number={number}
+                        onDialCodeChange={(prefix) => {
+                          const parts = resolveAddressPhoneParts(
+                            form.shipping_address
+                          );
+                          handleChange(
+                            "shipping_address.phone_prefix",
+                            prefix
+                          );
+                          handleChange(
+                            "shipping_address.phone_number",
+                            parts.number
+                          );
+                          handleChange(
+                            "shipping_address.phone",
+                            `${prefix} ${parts.number}`.trim()
+                          );
+                        }}
+                        onNumberChange={(nextNumber) => {
+                          const { dialCode: prefix } =
+                            resolveAddressPhoneParts(
+                              form.shipping_address
+                            );
+                          handleChange(
+                            "shipping_address.phone_prefix",
+                            prefix
+                          );
+                          handleChange(
+                            "shipping_address.phone_number",
+                            nextNumber
+                          );
+                          handleChange(
+                            "shipping_address.phone",
+                            `${prefix} ${nextNumber}`.trim()
+                          );
+                        }}
+                      />
+                    );
+                  }
+                  return (
+                    <Input
+                      key={key}
+                      label={optional ? `${label} (optional)` : label}
+                      type={type}
+                      value={form.shipping_address[key]}
+                      onChange={(e) =>
+                        handleChange(
+                          `shipping_address.${key}`,
+                          e.target.value
+                        )
+                      }
+                    />
+                  );
+                })}
               </div>
             </Section>
 
@@ -618,20 +742,70 @@ export default function NewOrderPopup({ onCreate }) {
                 {!sameAsShipping && (
                   <div className="new-order-grid">
                     {ADDRESS_FIELD_CONFIG.map(
-                      ({ key, label, type, optional }) => (
-                        <Input
-                          key={key}
-                          label={optional ? `${label} (optional)` : label}
-                          type={type}
-                          value={form.billing_address[key]}
-                          onChange={(e) =>
-                            handleChange(
-                              `billing_address.${key}`,
-                              e.target.value
-                            )
-                          }
-                        />
-                      )
+                      ({ key, label, type, optional }) => {
+                        if (key === "phone") {
+                          const { dialCode, number } = resolveAddressPhoneParts(
+                            form.billing_address
+                          );
+                          return (
+                            <AddressPhoneField
+                              key="billing-phone"
+                              label={optional ? `${label} (optional)` : label}
+                              dialCode={dialCode}
+                              number={number}
+                              onDialCodeChange={(prefix) => {
+                                const parts = resolveAddressPhoneParts(
+                                  form.billing_address
+                                );
+                                handleChange(
+                                  "billing_address.phone_prefix",
+                                  prefix
+                                );
+                                handleChange(
+                                  "billing_address.phone_number",
+                                  parts.number
+                                );
+                                handleChange(
+                                  "billing_address.phone",
+                                  `${prefix} ${parts.number}`.trim()
+                                );
+                              }}
+                              onNumberChange={(nextNumber) => {
+                                const { dialCode: prefix } =
+                                  resolveAddressPhoneParts(
+                                    form.billing_address
+                                  );
+                                handleChange(
+                                  "billing_address.phone_prefix",
+                                  prefix
+                                );
+                                handleChange(
+                                  "billing_address.phone_number",
+                                  nextNumber
+                                );
+                                handleChange(
+                                  "billing_address.phone",
+                                  `${prefix} ${nextNumber}`.trim()
+                                );
+                              }}
+                            />
+                          );
+                        }
+                        return (
+                          <Input
+                            key={key}
+                            label={optional ? `${label} (optional)` : label}
+                            type={type}
+                            value={form.billing_address[key]}
+                            onChange={(e) =>
+                              handleChange(
+                                `billing_address.${key}`,
+                                e.target.value
+                              )
+                            }
+                          />
+                        );
+                      }
                     )}
                   </div>
                 )}
@@ -753,6 +927,42 @@ function Input({ label, value, onChange, type = "text", disabled, ...rest }) {
         disabled={disabled}
         {...rest}
       />
+    </label>
+  );
+}
+
+function AddressPhoneField({
+  label,
+  dialCode,
+  number,
+  onDialCodeChange,
+  onNumberChange,
+}) {
+  const safeDial = dialCode || DEFAULT_DIAL_CODE;
+  const safeNumber = number || "";
+  return (
+    <label className="new-order-field">
+      <span className="new-order-label">{label}</span>
+      <div className="flex items-center gap-2">
+        <select
+          className="new-order-input w-24"
+          value={safeDial}
+          onChange={(e) => onDialCodeChange?.(e.target.value)}
+        >
+          {PHONE_DIAL_OPTIONS.map(({ value, label: optionLabel }) => (
+            <option key={value} value={value}>
+              {optionLabel}
+            </option>
+          ))}
+        </select>
+        <input
+          type="tel"
+          className="new-order-input flex-1"
+          value={safeNumber}
+          placeholder="Enter phone number"
+          onChange={(e) => onNumberChange?.(e.target.value)}
+        />
+      </div>
     </label>
   );
 }
