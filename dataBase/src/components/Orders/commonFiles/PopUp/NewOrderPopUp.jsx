@@ -66,7 +66,6 @@ const createEmptyAddress = () => ({
   line1: "",
   line2: "",
   city: "",
-  state: "",
   postal_code: "",
   country: "",
   phone: "",
@@ -106,7 +105,6 @@ const ADDRESS_FIELD_CONFIG = [
   { key: "line1", label: "Address Line 1" },
   { key: "line2", label: "Address Line 2", optional: true },
   { key: "city", label: "City" },
-  { key: "state", label: "State / Region" },
   { key: "postal_code", label: "Postal Code" },
   { key: "country", label: "Country" },
   { key: "phone", label: "Phone", type: "tel" },
@@ -315,20 +313,13 @@ export default function NewOrderPopup({ onCreate }) {
         wating_to_Be_Delivered: { status: false },
       },
       metadata: {
-        phone: form.phone,
-
-        full_name: form.name,
-        email: form.email,
         payment_provider: form.payment_provider,
         payment_id: form.payment_id,
         billing_same_as_shipping: sameAsShipping,
         shipping_address: shippingAddress,
         billing_address: billingAddress,
         shipping_cost_cents: shippingCostCents,
-        notes: "",
       },
-      fulfilled: false,
-      email_sent: false,
       track_url: "",
     };
 
