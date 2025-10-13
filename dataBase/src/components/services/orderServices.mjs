@@ -1,5 +1,10 @@
 // /services/ordersService.mjs
-import { createOrder,fetchOrders,patchOrder } from "./api/ordersAPI.mjs";
+import {
+  createOrder,
+  fetchOrders,
+  fetchOrder,
+  patchOrder,
+} from "./api/ordersAPI.mjs";
 import { mapDbToRows } from "../Orders/commonFiles/PopUp/utils/utils";
 
 export async function getAllOrders(limit = 100) {
@@ -25,6 +30,29 @@ export async function getAllOrders(limit = 100) {
   return mapDbToRows(Object.values(byId)).sort(
     (a, b) => (b.date?.getTime?.() ?? 0) - (a.date?.getTime?.() ?? 0)
   );
+}
+
+export async function getOrderById(orderId) {
+  if (!orderId) throw new Error("Order id is required");
+  const payload = await fetchOrder(orderId);
+  if (!payload) return null;
+  const order = payload?.order ?? payload;
+  if (!order) return null;
+  const id =
+    order.id ??
+    order.uid ??
+    order.orderId ??
+    order.order_id ??
+    orderId;
+  return { ...order, id };
+}
+
+export async function updateOrder(orderId, changes = {}) {
+  if (!orderId) throw new Error("Order id is required");
+  const cleanChanges =
+    changes && typeof changes === "object" ? { ...changes } : {};
+  if (Object.keys(cleanChanges).length === 0) return null;
+  return patchOrder(orderId, cleanChanges);
 }
 
 export async function updateOrderStatus(orderId, flatPatch = {}) {
@@ -65,3 +93,4 @@ export async function createOrderServices(order) {
   const response = await createOrder(order);
   return response?.order ?? response;
 }
+

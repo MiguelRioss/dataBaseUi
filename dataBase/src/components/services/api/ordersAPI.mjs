@@ -7,6 +7,17 @@ export async function fetchOrders({ limit = 100 } = {}) {
   return res.json();
 }
 
+export async function fetchOrder(id) {
+  const res = await fetch(`${API_BASE}/api/orders/${encodeURIComponent(id)}`);
+  if (!res.ok) {
+    if (res.status === 404) {
+      return null;
+    }
+    throw new Error(`Failed to fetch order ${id} (${res.status})`);
+  }
+  return res.json();
+}
+
 export async function createOrder(order) {
   const res = await fetch(`${API_BASE}/api/orders`, {
     method: "POST",
@@ -18,7 +29,7 @@ export async function createOrder(order) {
     try {
       const j = await res.json();
       if (j?.error) msg += `: ${j.error}`;
-      if (j?.detail) msg += ` — ${j.detail}`;
+      if (j?.detail) msg += ` - ${j.detail}`;
     } catch {}
     throw new Error(msg);
   }
@@ -29,14 +40,14 @@ export async function patchOrder(id, changes) {
   const res = await fetch(`${API_BASE}/api/orders/${encodeURIComponent(id)}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({changes}),
+    body: JSON.stringify({ changes }),
   });
   if (!res.ok) {
     let msg = `HTTP ${res.status}`;
     try {
       const j = await res.json();
       if (j?.error) msg += `: ${j.error}`;
-      if (j?.detail) msg += ` — ${j.detail}`;
+      if (j?.detail) msg += ` - ${j.detail}`;
     } catch {}
     throw new Error(msg);
   }

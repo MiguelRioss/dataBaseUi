@@ -18,6 +18,7 @@ export default function Orders() {
   const [editingId, setEditingId] = React.useState(null);
   const [savingId, setSavingId] = React.useState(null);
   const [sort, setSort] = React.useState({ key: "date", dir: "desc" });
+  const [searchTerm, setSearchTerm] = React.useState("");
 
   // ------- LOAD ORDERS -------
   const load = React.useCallback(async () => {
@@ -50,8 +51,7 @@ export default function Orders() {
         "waiting_to_be_delivered"
       )
     ) {
-      normalized.waiting_to_be_delivered =
-        normalized.wating_to_Be_Delivered;
+      normalized.waiting_to_be_delivered = normalized.wating_to_Be_Delivered;
     }
     delete normalized.wating_to_Be_Delivered;
     return normalized;
@@ -118,7 +118,7 @@ export default function Orders() {
   // ------- SAVE TRACK URL -------
   async function handleSaveTrackUrl(id, trackUrl) {
     try {
-      console.log(trackUrl)
+      console.log(trackUrl);
       setSavingId(id);
       await updateTrackUrl(id, trackUrl);
       setRows((prev) =>
@@ -153,7 +153,7 @@ export default function Orders() {
       const withoutDupes = prev.filter((row) => row.id !== mapped.id);
       return [mapped, ...withoutDupes];
     });
-}, []);
+  }, []);
 
   // ------- SORTING -------
   const SORT_KEYS = {
@@ -182,11 +182,26 @@ export default function Orders() {
     });
   };
 
+  const filteredRows = React.useMemo(() => {
+    const query = searchTerm.trim().toLowerCase();
+    if (!query) return rows;
+    return rows.filter((row) => {
+      const idMatch = String(row.id ?? "").toLowerCase().includes(query);
+      const paymentMatch = String(row.payment_id ?? "")
+        .toLowerCase()
+        .includes(query);
+      const nameMatch = String(row.name ?? "").toLowerCase().includes(query);
+      const emailMatch = String(row.email ?? "").toLowerCase().includes(query);
+      return idMatch || paymentMatch || nameMatch || emailMatch;
+    });
+  }, [rows, searchTerm]);
+
   const sortedRows = React.useMemo(() => {
+    const targetRows = filteredRows;
     const getter = SORT_KEYS[sort.key];
-    if (!getter) return rows;
+    if (!getter) return targetRows;
     const mul = sort.dir === "asc" ? 1 : -1;
-    return [...rows].sort((a, b) => {
+    return [...targetRows].sort((a, b) => {
       const va = getter(a);
       const vb = getter(b);
       if (va == null && vb == null) return 0;
@@ -196,28 +211,45 @@ export default function Orders() {
       if (va > vb) return 1 * mul;
       return 0;
     });
-  }, [rows, sort]);
+  }, [filteredRows, sort]);
+
+  const hasSearch = searchTerm.trim().length > 0;
 
   // ------- UI -------
   return (
     <div className="page py-4">
-      <div className="max-w-6xl mx-auto px-6">
-        <div className="orders-header">
-          <h1 className="orders-title">Orders</h1>
-          <div className="orders-actions">
-            {/* Only show Log button if orders exist */}
-            {rows.length > 0 && (
-              <button
-                className="btn btn--xl btn--primary w-full sm:w-auto"
-                onClick={logThenPatchOrders}
-                disabled={scanLoading}
-              >
-                {scanLoading ? "Updating..." : "Log Orders & Patch Flags"}
-              </button>
-            )}
-            {/* Always show Create Manual Order button */}
+      <div className="max-w-7xl mx-auto px-6">
+        <div className="orders-header flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <h1 className="orders-title text-xl font-semibold">Orders</h1>
+
+          <div className="orders-actions flex flex-wrap gap-6 sm:gap-8 items-center">
+            <button
+              className="btn btn--xl btn--primary"
+              onClick={logThenPatchOrders}
+              disabled={scanLoading}
+            >
+              {scanLoading ? "Updating..." : "Log Orders & Patch Flags"}
+            </button>
+
             <NewOrderPopup onCreate={handleManualOrderCreate} />
           </div>
+        </div>
+
+        <div className="mt-4 w-full sm:max-w-md">
+          <label
+            htmlFor="orders-search"
+            className="block text-sm font-medium text-gray-300 mb-1"
+          >
+            Search Orders
+          </label>
+          <input
+            id="orders-search"
+            type="text"
+            className="new-order-input w-full"
+            placeholder="Search by order id, payment id, name, or email"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
         </div>
 
         {/* State feedback below the header */}
@@ -226,6 +258,10 @@ export default function Orders() {
         ) : !rows.length ? (
           <div className="page text-center mt-6 text-gray-400">
             No orders yet.
+          </div>
+        ) : !filteredRows.length ? (
+          <div className="page text-center mt-6 text-gray-400">
+            No orders match your search.
           </div>
         ) : (
           <div className="overflow-x-auto mt-6">
@@ -271,7 +307,7 @@ export default function Orders() {
                     onToggle={toggleSort}
                   />
                   <th>Track URL</th>
-                  <th >Actions</th>
+                  <th>Actions</th>
                   <SortableTh
                     label="Status"
                     colKey="status"
