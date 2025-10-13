@@ -7,9 +7,8 @@ import {
   updateTrackUrl,
 } from "../services/orderServices.mjs";
 import { patchAllOrderFlags } from "../services/cttPatch";
-import NewOrderPopup from "./commonFiles/PopUp/NewOrderPopUp";
+import NewOrderPopup from "./commonFiles/NewOrder/NewOrderPopUp";
 import { mapDbToRows } from "./commonFiles/PopUp/utils/utils";
-
 export default function Orders() {
   const [rows, setRows] = React.useState([]);
   const [loading, setLoading] = React.useState(true);

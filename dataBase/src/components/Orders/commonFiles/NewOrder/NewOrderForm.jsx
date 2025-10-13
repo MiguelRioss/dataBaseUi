@@ -1,5 +1,3 @@
-import React from "react";
-
 const PHONE_DIAL_OPTIONS = [
   { value: "+351", label: "PT (+351)" },
   { value: "+44", label: "UK (+44)" },
