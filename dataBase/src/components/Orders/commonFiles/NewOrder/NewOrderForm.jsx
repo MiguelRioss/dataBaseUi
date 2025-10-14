@@ -1,12 +1,13 @@
-const PHONE_DIAL_OPTIONS = [
-  { value: "+351", label: "PT (+351)" },
-  { value: "+44", label: "UK (+44)" },
-  { value: "+33", label: "FR (+33)" },
-  { value: "+34", label: "ES (+34)" },
-  { value: "+1", label: "US (+1)" },
-  { value: "+39", label: "IT (+39)" },
-  { value: "+49", label: "DE (+49)" },
-];
+import { allCountries } from "country-telephone-data";
+
+const PHONE_DIAL_OPTIONS = allCountries.map((country) => ({
+  value: `+${country.dialCode}`,
+  label: `${country.name} (+${country.dialCode})`,
+  iso2: country.iso2,
+}));
+
+PHONE_DIAL_OPTIONS.sort((a, b) => a.label.localeCompare(b.label));
+
 
 const ADDRESS_FIELD_CONFIG = [
   { key: "name", label: "Contact Name" },
