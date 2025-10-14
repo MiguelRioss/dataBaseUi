@@ -16,6 +16,7 @@ export default function OrderRow({
   onCancelEdit,
   onSaveTrackUrl,
   saving,
+  sendingEmail,
 
   // NEW - pass from parent:
   onUpdateStatus, // (orderId, flatPatch) => Promise<void>
@@ -24,6 +25,21 @@ export default function OrderRow({
   onSendEmail,
 }) {
   const deliveredOk = !!row?.status?.delivered?.status;
+  const trackingCode = String(row?.track_url ?? "").trim();
+  const normalizedTrackingCode = trackingCode.toUpperCase();
+  const hasTrackingCode =
+    normalizedTrackingCode.length > 0 && normalizedTrackingCode.includes("RT");
+  const emailAlreadySent = !!row?.email_sent;
+  const emailButtonDisabled = sendingEmail || !hasTrackingCode;
+  const emailButtonLabel = sendingEmail
+    ? "Sending..."
+    : emailAlreadySent
+    ? "Resend Shipping Email"
+    : "Send Shipping Email";
+  const emailButtonTitle =
+    !hasTrackingCode && !sendingEmail
+      ? "Add an RT tracking code to enable shipping emails."
+      : undefined;
     
   return (
     <tr key={row.id}>
@@ -106,9 +122,10 @@ export default function OrderRow({
             className="btn"
             type="button"
             onClick={() => onSendEmail?.(row)}
-            disabled={row.id != "RT"}
+            disabled={emailButtonDisabled}
+            title={emailButtonTitle}
           >
-            Send Email to Customer
+            {emailButtonLabel}
           </button>
         </div>
       </td>

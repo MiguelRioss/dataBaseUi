@@ -3,12 +3,14 @@ import OrderRow from "./OrderRow";
 import SortableTh from "./commonFiles/toggleSort";
 import {
   getAllOrders,
+  getOrderById,
   updateOrderStatus,
   updateTrackUrl,
 } from "../services/orderServices.mjs";
 import { patchAllOrderFlags } from "../services/cttPatch";
 import NewOrderPopup from "./commonFiles/NewOrder/NewOrderPopUp";
-import { mapDbToRows } from "./commonFiles/PopUp/utils/utils";
+import { mapDbToRows, buildCttUrl } from "./commonFiles/PopUp/utils/utils";
+import { sendShippingEmail } from "../services/emailServices.mjs";
 export default function Orders() {
   const [rows, setRows] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
@@ -16,6 +18,7 @@ export default function Orders() {
   const [scanLoading, setScanLoading] = React.useState(false);
   const [editingId, setEditingId] = React.useState(null);
   const [savingId, setSavingId] = React.useState(null);
+  const [sendingEmailId, setSendingEmailId] = React.useState(null);
   const [sort, setSort] = React.useState({ key: "date", dir: "desc" });
   const [searchTerm, setSearchTerm] = React.useState("");
   const manualOrderRef = React.useRef(null);
@@ -100,19 +103,80 @@ export default function Orders() {
   }
 
   const handleSendEmail = React.useCallback(
-    (order) => {
-      if (!order?.email) {
+    async (row) => {
+      if (!row) return;
+      const trackingCode = String(row.track_url ?? "").trim();
+      const normalizedTracking = trackingCode.toUpperCase();
+      const hasTracking =
+        normalizedTracking.length > 0 && normalizedTracking.includes("RT");
+
+      if (!hasTracking) {
+        setError("Add the RT tracking code before sending the shipping email.");
+        return;
+      }
+
+      if (!row.email) {
         setError("Customer email is missing for this order.");
         return;
       }
-      setError("");
-      const subject = encodeURIComponent(`Order ${order?.id ?? ""} update`);
-      const href = `mailto:${order.email}?subject=${subject}`;
-      if (typeof window !== "undefined") {
-        window.open(href, "_blank", "noopener,noreferrer");
+
+      if (sendingEmailId) return;
+
+      try {
+        setError("");
+        setSendingEmailId(row.id);
+
+        const order = await getOrderById(row.id);
+        if (!order) throw new Error("Order details not found.");
+
+        const orderDate =
+          order?.written_at ??
+          (typeof row?.date?.toISOString === "function"
+            ? row.date.toISOString()
+            : undefined);
+
+        const invoiceId =
+          order?.invoice_id ??
+          order?.metadata?.invoice_id ??
+          order?.metadata?.invoiceId;
+
+        const locale =
+          order?.metadata?.locale ??
+          order?.metadata?.lang ??
+          order?.metadata?.language;
+
+        await sendShippingEmail({
+          order,
+          orderId: row.id,
+          orderDate,
+          invoiceId,
+          trackingNumber: trackingCode,
+          trackingUrl: buildCttUrl(trackingCode),
+          locale,
+          live: true,
+        });
+
+        setRows((prev) =>
+          prev.map((existing) =>
+            existing.id === row.id
+              ? { ...existing, email_sent: true }
+              : existing
+          )
+        );
+      } catch (err) {
+        setError(err?.message || "Failed to send shipping email.");
+      } finally {
+        setSendingEmailId(null);
       }
     },
-    [setError]
+    [
+      sendingEmailId,
+      setError,
+      setRows,
+      buildCttUrl,
+      getOrderById,
+      sendShippingEmail,
+    ]
   );
 
   const handleOpenOrderEdit = React.useCallback(
@@ -251,6 +315,12 @@ export default function Orders() {
           </div>
         </div>
 
+        {error ? (
+          <div className="new-order-hint new-order-hint--error mt-4">
+            {error}
+          </div>
+        ) : null}
+
         <div className="mt-4 w-full sm:max-w-md">
           <label
             htmlFor="orders-search"
@@ -354,6 +424,7 @@ export default function Orders() {
                     onCancelEdit={() => setEditingId(null)}
                     onSaveTrackUrl={handleSaveTrackUrl}
                     saving={savingId === r.id}
+                    sendingEmail={sendingEmailId === r.id}
                     onUpdateStatus={handleUpdateStatus}
                     onToggleDelivered={handleToggleDelivered}
                     onSendEmail={handleSendEmail}
