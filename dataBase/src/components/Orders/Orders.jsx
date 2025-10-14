@@ -18,6 +18,7 @@ export default function Orders() {
   const [savingId, setSavingId] = React.useState(null);
   const [sort, setSort] = React.useState({ key: "date", dir: "desc" });
   const [searchTerm, setSearchTerm] = React.useState("");
+  const manualOrderRef = React.useRef(null);
 
   // ------- LOAD ORDERS -------
   const load = React.useCallback(async () => {
@@ -112,6 +113,23 @@ export default function Orders() {
       }
     },
     [setError]
+  );
+
+  const handleOpenOrderEdit = React.useCallback(
+    (orderId) => {
+      try {
+        setError("");
+        const result = manualOrderRef.current?.openEdit(orderId);
+        if (result?.catch) {
+          result.catch((err) => {
+            setError(err?.message || String(err));
+          });
+        }
+      } catch (err) {
+        setError(err?.message || String(err));
+      }
+    },
+    [manualOrderRef, setError]
   );
 
   // ------- SAVE TRACK URL -------
@@ -229,8 +247,7 @@ export default function Orders() {
             >
               {scanLoading ? "Updating..." : "Log Orders & Patch Flags"}
             </button>
-
-            <NewOrderPopup onCreate={handleManualOrderCreate} />
+            <NewOrderPopup ref={manualOrderRef} onCreate={handleManualOrderCreate} />
           </div>
         </div>
 
@@ -340,6 +357,7 @@ export default function Orders() {
                     onUpdateStatus={handleUpdateStatus}
                     onToggleDelivered={handleToggleDelivered}
                     onSendEmail={handleSendEmail}
+                    onOpenOrderEdit={handleOpenOrderEdit}
                   />
                 ))}
               </tbody>

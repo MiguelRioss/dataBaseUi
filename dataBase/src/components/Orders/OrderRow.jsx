@@ -17,9 +17,11 @@ export default function OrderRow({
   onSaveTrackUrl,
   saving,
 
-  // NEW — pass from parent:
+  // NEW - pass from parent:
   onUpdateStatus, // (orderId, flatPatch) => Promise<void>
   onToggleDelivered, // (orderId, nextVal:boolean) => Promise<void>
+  onOpenOrderEdit,
+  onSendEmail,
 }) {
   const deliveredOk = !!row?.status?.delivered?.status;
     
@@ -80,18 +82,38 @@ export default function OrderRow({
       </td>
 
       <td>
-        {!isEditing ? (
-          <button className="btn" onClick={() => onEdit(row.id)}>
-            Edit
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 8,
+            alignItems: "stretch",
+          }}
+        >
+          {!isEditing ? (
+            <button className="btn" onClick={() => onEdit?.(row.id)}>
+              Edit Tracking
+            </button>
+          ) : null}
+          <button
+            className="btn btn--ghost"
+            type="button"
+            onClick={() => onOpenOrderEdit?.(row.id)}
+          >
+            Edit Order
           </button>
-        ) : null}
-
-         <button className="btn" onClick={{}} disabled={row.id != "RT"}>
-            Send Email to Customer 
+          <button
+            className="btn"
+            type="button"
+            onClick={() => onSendEmail?.(row)}
+            disabled={row.id != "RT"}
+          >
+            Send Email to Customer
           </button>
+        </div>
       </td>
 
-      {/* STATUS POPUP — now receives a save handler */}
+      {/* STATUS POPUP - now receives a save handler */}
       <td>
         <StatusPopUp
           status={row.status}
@@ -125,4 +147,3 @@ export default function OrderRow({
       </td>
     </tr>
   );
-}

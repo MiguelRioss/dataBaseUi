@@ -5,9 +5,7 @@ import {
   centsToEuroInput,
   sanitizeMoneyInput,
   createEmptyItem,
-  DEFAULT_DIAL_CODE,
   setNestedValue,
-  normalizeAddressPhone,
   createInitialForm,
 } from "../utils/NewOrderUtils.jsx";
 
@@ -32,6 +30,66 @@ export function useOrderForm({ sameAsShipping, products }) {
     [sameAsShipping]
   );
 
+  const handleSelectProduct = useCallback(
+    (index, productId) => {
+      setForm((prev) => {
+        if (!prev.items[index]) return prev;
+
+        const product =
+          products?.find?.((candidate) => candidate.id === String(productId)) ??
+          null;
+
+        const nextItems = prev.items.map((item, idx) => {
+          if (idx !== index) return item;
+
+          const nextItem = {
+            ...item,
+            id: String(productId ?? ""),
+            name: product?.name ?? "",
+          };
+
+          if (!productId) {
+            nextItem.unit_amount = sanitizeMoneyInput(nextItem.unit_amount);
+            return nextItem;
+          }
+
+          if (product?.priceInCents != null) {
+            nextItem.unit_amount = centsToEuroInput(product.priceInCents);
+          }
+
+          if (!nextItem.quantity || Number(nextItem.quantity) <= 0) {
+            nextItem.quantity = "1";
+          }
+
+          return nextItem;
+        });
+
+        const totalCents = calculateOrderTotalCents(
+          nextItems,
+          prev.shipping_cost
+        );
+        return {
+          ...prev,
+          items: nextItems,
+          amount_total: centsToEuroInput(totalCents),
+        };
+      });
+    },
+    [products]
+  );
+
+  const handleShippingCostChange = useCallback((value) => {
+    setForm((prev) => {
+      const sanitized = sanitizeMoneyInput(value);
+      const totalCents = calculateOrderTotalCents(prev.items, sanitized);
+      return {
+        ...prev,
+        shipping_cost: sanitized,
+        amount_total: centsToEuroInput(totalCents),
+      };
+    });
+  }, []);
+
   const handleAddItem = useCallback(() => {
     setForm((prev) => {
       const nextItems = [...prev.items, createEmptyItem()];
@@ -49,5 +107,13 @@ export function useOrderForm({ sameAsShipping, products }) {
     });
   }, []);
 
-  return { form, setForm, handleChange, handleAddItem, handleRemoveItem };
+  return {
+    form,
+    setForm,
+    handleChange,
+    handleSelectProduct,
+    handleShippingCostChange,
+    handleAddItem,
+    handleRemoveItem,
+  };
 }
