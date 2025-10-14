@@ -326,6 +326,7 @@ const NewOrderPopup = React.forwardRef(function NewOrderPopup(
         title={mode === "edit" ? `Edit Order ${editingOrderId ?? ""}` : "Create New Order"}
         open={open}
         onClose={handleCloseForm}
+        closeOnBackdrop={false}
       >
         <NewOrderForm
           form={form}
