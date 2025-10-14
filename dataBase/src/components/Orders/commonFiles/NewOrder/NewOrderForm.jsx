@@ -51,7 +51,41 @@ export default function NewOrderForm({
   const safeResolvePhone =
     typeof resolveAddressPhoneParts === "function"
       ? resolveAddressPhoneParts
-      : () => ({ dialCode: defaultDialCode, number: "" });
+      : (address = {}) => {
+          const source =
+            address && typeof address === "object" ? address : {};
+          const rawPrefix =
+            typeof source.phone_prefix === "string"
+              ? source.phone_prefix.trim()
+              : "";
+          const rawNumber =
+            typeof source.phone_number === "string"
+              ? source.phone_number.trim()
+              : "";
+
+          if (rawPrefix || rawNumber) {
+            return {
+              dialCode: rawPrefix || defaultDialCode,
+              number: rawNumber,
+            };
+          }
+
+          const combined =
+            typeof source.phone === "string" ? source.phone.trim() : "";
+          if (!combined) {
+            return { dialCode: defaultDialCode, number: "" };
+          }
+
+          if (combined.startsWith("+")) {
+            const [maybePrefix, ...rest] = combined.split(/\s+/);
+            return {
+              dialCode: maybePrefix || defaultDialCode,
+              number: rest.join(" ").trim(),
+            };
+          }
+
+          return { dialCode: defaultDialCode, number: combined };
+        };
 
   const safeDialCode = form.phonePrefix || defaultDialCode;
   const safePhoneNumber = form.phoneNumber || "";

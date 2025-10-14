@@ -23,6 +23,7 @@ import {
   createInitialForm,
   DEFAULT_DIAL_CODE,
   formatCents,
+  resolveAddressPhoneParts,
 } from "./utils/NewOrderUtils.jsx";
 
 const NewOrderPopup = React.forwardRef(function NewOrderPopup(
@@ -337,6 +338,7 @@ const NewOrderPopup = React.forwardRef(function NewOrderPopup(
           saving={saving}
           submitError={submitError}
           defaultDialCode={DEFAULT_DIAL_CODE}
+          resolveAddressPhoneParts={resolveAddressPhoneParts}
           formatPrice={formatCents}
           onFieldChange={handleChange}
           onShippingCostChange={handleShippingCostChange}
