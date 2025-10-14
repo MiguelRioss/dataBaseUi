@@ -7,7 +7,12 @@ import {
   getOrderById,
   updateOrder,
 } from "../../../services/orderServices.mjs";
-import { buildPayloadFromForm, computeChanges } from "./utils/orderPayload.js";
+import {
+  buildPayloadFromForm,
+  computeChanges,
+  buildComparableFromOrder,
+  buildFormStateFromOrder,
+} from "./utils/orderPayload.js";
 import { useOrderForm } from "./hooks/useOrderForm.js";
 import {
   createInitialForm,
@@ -116,8 +121,16 @@ export default function NewOrderPopup({ onCreate }) {
       const order = await getOrderById(trimmed);
       if (!order) throw new Error(`Order ${trimmed} not found.`);
 
-      setEditingOrderId(order.id);
-      setOriginalOrderMetadata(order.metadata ?? {});
+      const metadata = order.metadata ?? {};
+      const comparable = buildComparableFromOrder(order);
+      const { form: hydratedForm, sameAsShipping: hydratedSame } =
+        buildFormStateFromOrder(order);
+
+      setEditingOrderId(order.id ?? trimmed);
+      setOriginalOrderMetadata(metadata);
+      setOriginalOrderComparable(comparable);
+      setForm(hydratedForm);
+      setSameAsShipping(hydratedSame);
       setMode("edit");
       setEditModalOpen(false);
       setOpen(true);

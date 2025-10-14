@@ -8,10 +8,11 @@ import {
   DEFAULT_DIAL_CODE,
   setNestedValue,
   normalizeAddressPhone,
+  createInitialForm,
 } from "../utils/NewOrderUtils.jsx";
 
 export function useOrderForm({ sameAsShipping, products }) {
-  const [form, setForm] = useState();
+  const [form, setForm] = useState(() => createInitialForm());
 
   const handleChange = useCallback(
     (path, value) => {

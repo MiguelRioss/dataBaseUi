@@ -4,6 +4,10 @@ import {
   calculateOrderTotalCents,
   createEmptyAddress,
   normalizeAddressPhone,
+  createInitialForm,
+  createEmptyItem,
+  centsToEuroInput,
+  splitPhoneValue,
 } from "./NewOrderUtils.jsx";
 import { deepEqual } from "./compareUtils.js";
 
@@ -52,6 +56,94 @@ export function buildComparableFromOrder(order = {}) {
       billing_address: billingAddress,
       shipping_cost_cents: Number(metadata.shipping_cost_cents ?? 0),
     },
+  };
+}
+
+export function buildFormStateFromOrder(order = {}) {
+  const baseForm = createInitialForm();
+  if (!order || typeof order !== "object") {
+    return { form: baseForm, sameAsShipping: true };
+  }
+
+  const metadata = order.metadata ?? {};
+  const shippingAddress = normalizeAddressForPayload(
+    metadata.shipping_address ? { ...metadata.shipping_address } : createEmptyAddress()
+  );
+  const billingAddress = normalizeAddressForPayload(
+    metadata.billing_address ? { ...metadata.billing_address } : createEmptyAddress()
+  );
+
+  const sameAsShippingRaw =
+    metadata.billing_same_as_shipping ?? metadata.billingSameAsShipping;
+  const sameAsShipping =
+    sameAsShippingRaw == null
+      ? true
+      : typeof sameAsShippingRaw === "string"
+      ? sameAsShippingRaw === "true"
+      : !!sameAsShippingRaw;
+
+  const phoneParts = splitPhoneValue(order.phone ?? "");
+  const phonePrefix = phoneParts.prefix || baseForm.phonePrefix;
+  const phoneNumber = phoneParts.number || baseForm.phoneNumber;
+  const combinedPhone =
+    (order.phone ?? "").trim() ||
+    (phoneNumber ? `${phonePrefix} ${phoneNumber}`.trim() : baseForm.phone);
+
+  const ensureItem = (item) => {
+    const rawQuantity = Number(item?.quantity ?? 0);
+    const quantity = Number.isFinite(rawQuantity) ? rawQuantity : 0;
+    const rawUnitAmount =
+      item?.unit_amount_cents != null
+        ? Number(item.unit_amount_cents)
+        : item?.unit_amount != null
+        ? Number(item.unit_amount)
+        : 0;
+    const id =
+      item?.id != null
+        ? String(item.id).trim()
+        : item?.product_id != null
+        ? String(item.product_id).trim()
+        : "";
+
+    return {
+      id,
+      name: item?.name ?? "",
+      quantity: quantity.toString(),
+      unit_amount: centsToEuroInput(rawUnitAmount),
+    };
+  };
+
+  const baseItems =
+    Array.isArray(order.items) && order.items.length
+      ? order.items
+      : [createEmptyItem()];
+  const items = baseItems.map((item) => ensureItem(item));
+
+  const shippingCostCents = Number(metadata.shipping_cost_cents ?? 0);
+  const shippingCost = centsToEuroInput(shippingCostCents);
+  const amountTotalCents =
+    order.amount_total != null
+      ? Number(order.amount_total)
+      : calculateOrderTotalCents(items, shippingCost);
+
+  return {
+    form: {
+      ...baseForm,
+      name: order.name ?? baseForm.name,
+      email: order.email ?? baseForm.email,
+      phone: combinedPhone,
+      phonePrefix,
+      phoneNumber,
+      amount_total: centsToEuroInput(amountTotalCents),
+      currency: order.currency ?? baseForm.currency,
+      payment_provider: metadata.payment_provider ?? baseForm.payment_provider,
+      payment_id: order.payment_id ?? metadata.payment_id ?? baseForm.payment_id,
+      shipping_cost: shippingCost,
+      shipping_address: shippingAddress,
+      billing_address: sameAsShipping ? { ...shippingAddress } : billingAddress,
+      items,
+    },
+    sameAsShipping,
   };
 }
 
