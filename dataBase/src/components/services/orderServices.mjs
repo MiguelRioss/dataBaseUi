@@ -1,4 +1,3 @@
-// /services/ordersService.mjs
 import {
   createOrder,
   fetchOrders,
@@ -6,6 +5,45 @@ import {
   patchOrder,
 } from "./api/ordersAPI.mjs";
 import { mapDbToRows } from "../Orders/commonFiles/PopUp/utils/utils";
+import {
+  SHIPMENT_STATUS_KEYS,
+  normalizeShipmentStatus,
+} from "../Orders/commonFiles/Status/shipmentStatus.js";
+
+function getCurrentDateTimeParts() {
+  const iso = new Date().toISOString();
+  return {
+    date: iso.slice(0, 10),
+    time: iso.slice(11, 19),
+  };
+}
+
+function buildNextStatusStep(prev = {}, nextStatus) {
+  const previous =
+    prev && typeof prev === "object"
+      ? {
+          status: !!prev.status,
+          date: prev.date ?? null,
+          time: prev.time ?? null,
+        }
+      : { status: false, date: null, time: null };
+
+  if (!nextStatus) {
+    return { status: false, date: null, time: null };
+  }
+
+  if (previous.status && previous.date && previous.time) {
+    return { ...previous, status: true };
+  }
+
+  const { date, time } = getCurrentDateTimeParts();
+  return {
+    ...previous,
+    status: true,
+    date: previous.date ?? date,
+    time: previous.time ?? time,
+  };
+}
 
 export async function getAllOrders(limit = 100) {
   const payload = await fetchOrders({ limit });
@@ -13,10 +51,10 @@ export async function getAllOrders(limit = 100) {
   const list = Array.isArray(payload)
     ? payload
     : Array.isArray(payload?.items)
-    ? payload.items
-    : payload?.items && typeof payload.items === "object"
-    ? Object.values(payload.items)
-    : [];
+      ? payload.items
+      : payload?.items && typeof payload.items === "object"
+        ? Object.values(payload.items)
+        : [];
 
   const byId = Object.fromEntries(
     list
@@ -56,32 +94,29 @@ export async function updateOrder(orderId, changes = {}) {
 }
 
 export async function updateOrderStatus(orderId, flatPatch = {}) {
-  const wrap = (value) =>
-    value === undefined ? undefined : { status: !!value };
+  if (!orderId) throw new Error("Missing orderId for updateOrderStatus.");
 
-  const statusChanges = {};
-  const assign = (key, value) => {
-    const wrapped = wrap(value);
-    if (wrapped !== undefined) {
-      statusChanges[key] = wrapped;
-    }
-  };
+  const existing = await getOrderById(orderId);
+  if (!existing) throw new Error(`Order not found: ${orderId}`);
 
-  assign("accepted", flatPatch.accepted);
-  assign("in_transit", flatPatch.in_transit);
-  assign("delivered", flatPatch.delivered);
-  assign("acceptedInCtt", flatPatch.acceptedInCtt);
+  const currentStatus = normalizeShipmentStatus(existing.status);
+  const mergedStatus = { ...currentStatus };
+  let didChange = false;
 
-  const waitingValue =
-    flatPatch.waiting_to_be_delivered ?? flatPatch.wating_to_Be_Delivered;
-  if (waitingValue !== undefined) {
-    statusChanges.waiting_to_be_delivered = { status: !!waitingValue };
-    statusChanges.wating_to_Be_Delivered = { status: !!waitingValue };
+  for (const key of SHIPMENT_STATUS_KEYS) {
+    if (flatPatch[key] === undefined) continue;
+    didChange = true;
+    const nextStatus = !!flatPatch[key];
+    const prev = mergedStatus[key] || {};
+    mergedStatus[key] = buildNextStatusStep(prev, nextStatus);
   }
 
-  if (Object.keys(statusChanges).length === 0) return;
+  if (!didChange) {
+    return currentStatus;
+  }
 
-  return patchOrder(orderId, { status: statusChanges });
+  await patchOrder(orderId, { status: mergedStatus });
+  return normalizeShipmentStatus(mergedStatus);
 }
 
 export async function updateTrackUrl(orderId, trackUrl) {

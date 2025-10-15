@@ -1,6 +1,10 @@
 // src/components/Orders/utils.js
+import {
+  SHIPMENT_STATUS_KEYS,
+  SHIPMENT_STATUS_LABELS,
+  normalizeShipmentStatus,
+} from "../../Status/shipmentStatus.js";
 
-// Simple EUR helper (delegates to the generic formatter for consistency)
 export function centsToEUR(cents) {
   return formatCents(cents, "eur");
 }
@@ -26,17 +30,14 @@ export function buildCttUrl(code = "") {
 export function mapDbToRows(valObj = {}) {
   return Object.entries(valObj).map(([id, v]) => {
     const meta = v?.metadata ?? {};
-
-    // --- Extract metadata-level addresses ---
     const shipping_address = { ...(meta.shipping_address ?? {}) };
     const billing_address = { ...(meta.billing_address ?? {}) };
 
-    // --- Auto-fill missing name and phone/email fields ---
-    const fullName = v.name;
-    const phone = meta.phone;
-
-    const email = v.email;
-    const shippingCost = meta.shipping_cost_cents;
+    const fullName = v.name ?? "";
+    const phone = meta.phone ?? "";
+    const email = v.email ?? "";
+    const shippingCost = meta.shipping_cost_cents ?? 0;
+    const sentShippingEmail = v.sentShippingEmail
     const rawPaymentId =
       meta.payment_id ??
       meta.paymentId ??
@@ -45,52 +46,27 @@ export function mapDbToRows(valObj = {}) {
       rawPaymentId != null && rawPaymentId !== ""
         ? String(rawPaymentId).trim()
         : "";
-    if (!shipping_address.full_name) shipping_address.full_name = fullName;
-    if (!shipping_address.phone) shipping_address.phone = phone;
-    if (!shipping_address.email) shipping_address.email = email;
 
-    if (!billing_address.full_name) billing_address.full_name = fullName;
-    if (!billing_address.phone) billing_address.phone = phone;
-    if (!billing_address.email) billing_address.email = email;
+    // Fill missing name/contact fields
+    for (const addr of [shipping_address, billing_address]) {
+      if (!addr.full_name) addr.full_name = fullName;
+      if (!addr.phone) addr.phone = phone;
+      if (!addr.email) addr.email = email;
+    }
 
-    // --- Fallback address shape if no structured one exists ---
+    // Normalize structured status
+    const status = normalizeShipmentStatus(v?.status);
 
+    // Build status steps for UI (table, badges, etc.)
+    const status_steps = SHIPMENT_STATUS_KEYS.map((key) => ({
+      key,
+      label: SHIPMENT_STATUS_LABELS[key],
+      ...status[key],
+    }));
+    console.log("This is status:" ,status)
+    console.log("This is status steps :" ,status_steps)
 
-    // --- Structured status (unchanged) ---
-    const statusObj =
-      v && v.status && typeof v.status === "object" && !Array.isArray(v.status)
-        ? v.status
-        : {};
-
-    const step = (key) => {
-      const s = statusObj[key];
-      if (!s || typeof s !== "object") {
-        return { status: false, date: null, time: null };
-      }
-      return {
-        status: !!s.status,
-        date: s.date ?? null,
-        time: s.time ?? null,
-      };
-    };
-
-    const stepWithFallback = (...keys) => {
-      for (const key of keys) {
-        if (key in statusObj) return step(key);
-      }
-      return { status: false, date: null, time: null };
-    };
-
-    const deliveredStep = step("delivered");
-    const acceptedInCtt = step("acceptedInCtt");
-    const acceptedStep = step("accepted");
-    const inTransitStep = step("in_transit");
-    const waitingStep = stepWithFallback(
-      "waiting_to_be_delivered",
-      "wating_to_Be_Delivered"
-    );
-
-    // --- Final mapped object ---
+    // Final mapped order row
     return {
       id: v.id,
       date: v?.written_at ? new Date(v.written_at) : null,
@@ -107,26 +83,9 @@ export function mapDbToRows(valObj = {}) {
       fulfilled: !!v?.fulfilled,
       email_sent: !!(v?.email_sent ?? v?.email_sended),
       metadata: meta,
-
-      status: {
-        delivered: deliveredStep,
-        acceptedInCtt,
-        accepted: acceptedStep,
-        in_transit: inTransitStep,
-        waiting_to_be_delivered: waitingStep,
-      },
-
-      status_steps: [
-        { key: "acceptedInCtt", ...acceptedInCtt, label: "Accepted in CTT" },
-        { key: "accepted", ...acceptedStep, label: "Accepted" },
-        { key: "in_transit", ...inTransitStep, label: "In Transit" },
-        {
-          key: "waiting_to_be_delivered",
-          ...waitingStep,
-          label: "Waiting to be Delivered",
-        },
-        { key: "delivered", ...deliveredStep, label: "Delivered" },
-      ],
+      sentShippingEmail,
+      status,
+      status_steps
     };
   });
 }

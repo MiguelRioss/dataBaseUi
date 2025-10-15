@@ -147,7 +147,7 @@ export function buildFormStateFromOrder(order = {}) {
   };
 }
 
-export function buildPayloadFromForm(form, sameAsShipping, { includeStatusDefaults = false, baseMetadata } = {}) {
+export function buildPayloadFromForm(form, sameAsShipping, { baseMetadata } = {}) {
   const shippingAddress = normalizeAddressForPayload(form.shipping_address ?? {});
   const billingAddress = sameAsShipping
     ? normalizeAddressForPayload(form.shipping_address ?? {})
@@ -177,17 +177,6 @@ export function buildPayloadFromForm(form, sameAsShipping, { includeStatusDefaul
     items,
     metadata,
   };
-
-  if (includeStatusDefaults) {
-    payload.status = {
-      accepted: { status: false },
-      in_transit: { status: false },
-      delivered: { status: false },
-      acceptedInCtt: { status: false },
-      waiting_to_be_delivered: { status: false },
-    };
-    payload.track_url = "";
-  }
   return payload;
 }
 

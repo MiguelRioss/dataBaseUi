@@ -1,23 +1,28 @@
 /**
  * StatusBadge.jsx
- * Displays the first active status from a status object.
+ * Displays the last active status from a status object.
  */
 export default function StatusBadge({ status = {} }) {
   if (!status || typeof status !== "object") return null;
 
-  // Find first key whose .status is true
-  const activeEntry = Object.entries(status).find(([key, val]) => val?.status === true);
+  // Get all keys whose .status is true
+  const activeEntries = Object.entries(status).filter(
+    ([, val]) => val?.status === true
+  );
 
-  // Extract readable message
-  const message = activeEntry
-    ? formatStatusLabel(activeEntry[0])
+  // Pick the *last* one (most recent step)
+  const lastActive = activeEntries[activeEntries.length - 1];
+
+  // Extract readable label
+  const message = lastActive
+    ? formatStatusLabel(lastActive[0])
     : "No Active Status";
 
   return (
     <span
       className="badge badge--ok"
       style={{
-        backgroundColor: "#0c8438ff", // green-600
+        backgroundColor: "#0c8438ff", // green
         color: "white",
         fontWeight: 600,
       }}
@@ -27,7 +32,6 @@ export default function StatusBadge({ status = {} }) {
   );
 }
 
-// Optional helper to make the key more readable
 function formatStatusLabel(key) {
   return key
     .replace(/_/g, " ")

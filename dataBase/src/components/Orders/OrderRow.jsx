@@ -1,9 +1,8 @@
 ﻿import TrackEditor from "./commonFiles/TrackEditor";
 import AddressPopup from "./commonFiles/PopUp/AdressPopUp";
-import StatusPopUp from "./commonFiles/PopUp/StatusPopUp";
+import StatusPopUp from "./commonFiles/Status/StatusPopUp";
 import { centsToEUR, buildCttUrl } from "./commonFiles/PopUp/utils/utils";
 import ProductsPopup from "./commonFiles/PopUp/ProductsPopup";
-import Badge from "./commonFiles/Badge";
 import StatusBadge from "./commonFiles/StatusBadge";
 
 // NOTE: we won't import Badge here so we can make the cell clickable using the same classes.
@@ -29,22 +28,30 @@ export default function OrderRow({
   const normalizedTrackingCode = trackingCode.toUpperCase();
   const hasTrackingCode =
     normalizedTrackingCode.length > 0 && normalizedTrackingCode.includes("RT");
-  const emailAlreadySent = !!row?.email_sent;
+  // Detect email already sent from either DB key
+  // Detect email already sent from both possible locations (root or metadata)
+  const emailAlreadySent = row.sentShippingEmail
+  console.log(emailAlreadySent)
+
+
   const emailButtonDisabled = sendingEmail || !hasTrackingCode;
   const emailButtonLabel = sendingEmail
     ? "Sending..."
     : emailAlreadySent
-    ? "Resend Shipping Email"
+    ? "Re-Send Email"
     : "Send Shipping Email";
+
   const emailButtonTitle =
     !hasTrackingCode && !sendingEmail
       ? "Add an RT tracking code to enable shipping emails."
       : undefined;
-    
+
   return (
     <tr key={row.id}>
       <td data-mono>{row.id}</td>
-      <td>{row.payment_id ? row.payment_id : <span className="muted">-</span>}</td>
+      <td>
+        {row.payment_id ? row.payment_id : <span className="muted">-</span>}
+      </td>
       <td style={{ whiteSpace: "nowrap" }}>
         {row.date ? row.date.toLocaleString() : "-"}
       </td>
@@ -137,20 +144,9 @@ export default function OrderRow({
           onSave={(flatPatch) => onUpdateStatus?.(row.id, flatPatch)}
         />
       </td>
-      {/* Status? — See the last true status */}
       <td>
         <StatusBadge status={row.status}></StatusBadge>
-        {/* <button
-          type="button"
-          onClick={() => onToggleDelivered?.(row.id, !deliveredOk)}
-          className={`badge ${deliveredOk ? "badge--ok" : "badge--no"}`}
-          style={{ cursor: "pointer" }}
-          title="Toggle Delivered"
-        >
-          {deliveredOk ? "Yes" : "No"}
-        </button> */}
       </td>
-      {/* COMPLETED? — clickable badge using your existing classes */}
       <td>
         <button
           type="button"

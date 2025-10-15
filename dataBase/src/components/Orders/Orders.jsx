@@ -11,6 +11,11 @@ import { patchAllOrderFlags } from "../services/cttPatch";
 import NewOrderPopup from "./commonFiles/NewOrder/NewOrderPopUp";
 import { mapDbToRows, buildCttUrl } from "./commonFiles/PopUp/utils/utils";
 import { sendShippingEmail } from "../services/emailServices.mjs";
+import {
+  SHIPMENT_STATUS_KEYS,
+  SHIPMENT_STATUS_LABELS,
+} from "./commonFiles/Status/shipmentStatus";
+
 export default function Orders() {
   const [rows, setRows] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
@@ -41,65 +46,41 @@ export default function Orders() {
     load();
   }, [load]);
 
-  // ------- UPDATE STATUS -------
-  const normalizeStatusPatch = (patch = {}) => {
-    const normalized = { ...patch };
-    if (
-      Object.prototype.hasOwnProperty.call(
-        normalized,
-        "wating_to_Be_Delivered"
-      ) &&
-      !Object.prototype.hasOwnProperty.call(
-        normalized,
-        "waiting_to_be_delivered"
-      )
-    ) {
-      normalized.waiting_to_be_delivered = normalized.wating_to_Be_Delivered;
-    }
-    delete normalized.wating_to_Be_Delivered;
-    return normalized;
-  };
 
-  async function handleUpdateStatus(orderId, flatPatch) {
-    const normalizedPatch = normalizeStatusPatch(flatPatch);
+
+  async function handleUpdateStatus(orderId, patch) {
     try {
-      await updateOrderStatus(orderId, normalizedPatch);
+      const updatedStatus = await updateOrderStatus(orderId, patch);
+      const nextStatusSteps = SHIPMENT_STATUS_KEYS.map((key) => ({
+        key,
+        label: SHIPMENT_STATUS_LABELS[key],
+        ...updatedStatus[key],
+      }));
+
       setRows((prev) =>
         prev.map((r) =>
-          r.id === orderId
-            ? {
+          r.id !== orderId
+            ? r
+            : {
                 ...r,
-                status: ((currentStatus) => {
-                  const nextStatus = { ...currentStatus };
-                  delete nextStatus.wating_to_Be_Delivered;
-                  Object.entries(normalizedPatch).forEach(([key, value]) => {
-                    nextStatus[key] = {
-                      ...(nextStatus[key] ?? {}),
-                      status: !!value,
-                    };
-                  });
-                  return nextStatus;
-                })(r.status || {}),
+                status: updatedStatus,
+                status_steps: nextStatusSteps,
               }
-            : r
         )
       );
     } catch (e) {
-      setError(e.message);
+      setError(e.message || String(e));
     }
   }
 
   async function handleToggleDelivered(orderId, nextVal) {
-    const flat = nextVal
-      ? {
-          accepted: true,
-          in_transit: true,
-          delivered: true,
-          acceptedInCtt: true,
-          waiting_to_be_delivered: true,
-        }
-      : { delivered: false };
-    return handleUpdateStatus(orderId, flat);
+    // When delivered, mark all steps true; otherwise false
+    const patch = SHIPMENT_STATUS_KEYS.reduce((acc, key) => {
+      acc[key] = nextVal;
+      return acc;
+    }, {});
+
+    return handleUpdateStatus(orderId, patch);
   }
 
   const handleSendEmail = React.useCallback(
@@ -267,12 +248,18 @@ export default function Orders() {
     const query = searchTerm.trim().toLowerCase();
     if (!query) return rows;
     return rows.filter((row) => {
-      const idMatch = String(row.id ?? "").toLowerCase().includes(query);
+      const idMatch = String(row.id ?? "")
+        .toLowerCase()
+        .includes(query);
       const paymentMatch = String(row.payment_id ?? "")
         .toLowerCase()
         .includes(query);
-      const nameMatch = String(row.name ?? "").toLowerCase().includes(query);
-      const emailMatch = String(row.email ?? "").toLowerCase().includes(query);
+      const nameMatch = String(row.name ?? "")
+        .toLowerCase()
+        .includes(query);
+      const emailMatch = String(row.email ?? "")
+        .toLowerCase()
+        .includes(query);
       return idMatch || paymentMatch || nameMatch || emailMatch;
     });
   }, [rows, searchTerm]);
@@ -311,7 +298,10 @@ export default function Orders() {
             >
               {scanLoading ? "Updating..." : "Log Orders & Patch Flags"}
             </button>
-            <NewOrderPopup ref={manualOrderRef} onCreate={handleManualOrderCreate} />
+            <NewOrderPopup
+              ref={manualOrderRef}
+              onCreate={handleManualOrderCreate}
+            />
           </div>
         </div>
 
