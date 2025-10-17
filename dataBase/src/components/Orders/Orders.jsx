@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import OrderRow from "./OrderRow";
 import SortableTh from "./commonFiles/toggleSort";
 import {
@@ -7,6 +7,7 @@ import {
   updateOrderStatus,
   updateTrackUrl,
   updatePaymentStatus,
+  updateShippingEmailStatus
 } from "../services/orderServices.mjs";
 import { patchAllOrderFlags } from "../services/cttPatch";
 import NewOrderPopup from "./commonFiles/NewOrder/NewOrderPopUp";
@@ -152,6 +153,7 @@ export default function Orders() {
           order?.metadata?.lang ??
           order?.metadata?.language;
 
+        // ✅ 1️⃣ Send the actual email
         await sendShippingEmail({
           order,
           orderId: row.id,
@@ -163,10 +165,17 @@ export default function Orders() {
           live: true,
         });
 
+        // ✅ 2️⃣ Persist flag to DB
+        await updateShippingEmailStatus(row.id, true);
+        console.log(
+          `[Orders.jsx] DB updated: sentShippingEmail=true for ${row.id}`
+        );
+
+        // ✅ 3️⃣ Update local UI immediately
         setRows((prev) =>
           prev.map((existing) =>
             existing.id === row.id
-              ? { ...existing, email_sent: true }
+              ? { ...existing, sentShippingEmail: true }
               : existing
           )
         );
@@ -176,14 +185,6 @@ export default function Orders() {
         setSendingEmailId(null);
       }
     },
-    [
-      sendingEmailId,
-      setError,
-      setRows,
-      buildCttUrl,
-      getOrderById,
-      sendShippingEmail,
-    ]
   );
 
   const handleSendInvoice = React.useCallback(
@@ -207,7 +208,6 @@ export default function Orders() {
           order,
           orderId: row.id,
           invoiceId,
-          adminEmail,
           live: true,
         });
       } catch (err) {
@@ -496,6 +496,7 @@ export default function Orders() {
                       onSaveTrackUrl={handleSaveTrackUrl}
                       saving={savingId === r.id}
                       sendingEmail={sendingEmailId === r.id} // ✅ boolean, not sendingEmailId
+                      sendingInvoice={sendingInvoiceId === r.id} // ✅ ADD THIS
                       onUpdateStatus={handleUpdateStatus}
                       onToggleDelivered={handleToggleDelivered}
                       onSendEmail={handleSendEmail}

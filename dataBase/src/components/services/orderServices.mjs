@@ -93,6 +93,16 @@ export async function updateOrder(orderId, changes = {}) {
   return patchOrder(orderId, cleanChanges);
 }
 
+
+export async function updateShippingEmailStatus(orderId, value = true) {
+  if (!orderId) throw new Error("Missing orderId for updateShippingEmailStatus.");
+
+  console.log("[orderServices] Updating sentShippingEmail:", { orderId, value });
+
+  // Reuse patchOrder to persist only the flag
+  return patchOrder(orderId, { sentShippingEmail: value });
+}
+
 export async function updateOrderStatus(orderId, flatPatch = {}) {
   if (!orderId) throw new Error("Missing orderId for updateOrderStatus.");
 

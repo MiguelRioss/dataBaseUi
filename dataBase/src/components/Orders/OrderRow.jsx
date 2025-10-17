@@ -22,6 +22,7 @@ export default function OrderRow({
   onSendInvoice,
   paymentStatus, // ✅ DB: payment_status
   emailSentThankYouAdmin, // ✅ DB: email_Sent_ThankYou_Admin
+  sendingInvoice,
 }) {
   const deliveredOk = !!row?.status?.delivered?.status;
   const trackingCode = String(row?.track_url ?? "").trim();
@@ -50,12 +51,12 @@ export default function OrderRow({
   const paymentButtonClass = `badge ${isPaid ? "badge--ok" : "badge--no"}`;
 
   // --- Invoice / Admin Email Button ---
-  console.log("Email sent ? ", emailSentThankYouAdmin)
-  const invoiceAlreadySent = !!emailSentThankYouAdmin; // ✅ DB flag
-  const invoiceButtonDisabled = !isPaid || sendingEmail;
+  console.log("Email sent ? ", emailSentThankYouAdmin);
+  const invoiceAlreadySent = !!emailSentThankYouAdmin;
+  const invoiceButtonDisabled = !isPaid || sendingInvoice || sendingEmail;
 
   let invoiceButtonLabel;
-  if (sendingEmail) invoiceButtonLabel = "Sending...";
+  if (sendingInvoice) invoiceButtonLabel = "Sending...";
   else if (invoiceAlreadySent)
     invoiceButtonLabel = "Re-send Shipping + Admin Email";
   else invoiceButtonLabel = "Send Shipping + Admin Email";
@@ -65,7 +66,7 @@ export default function OrderRow({
     : invoiceAlreadySent
     ? "This email was already sent. Click to re-send."
     : "Send shipping confirmation to customer and admin.";
-    
+
   return (
     <tr key={row.id}>
       <td data-mono>{row.id}</td>
