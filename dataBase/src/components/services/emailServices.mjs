@@ -32,3 +32,20 @@ export async function sendShippingEmail(payload) {
 
   return res.json().catch(() => ({}));
 }
+
+export async function sendInvoiceEmail(payload) {
+  const res = await fetch(`${API_BASE}/api/email/invoice`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload ?? {}),
+  });
+
+  if (!res.ok) {
+    const message = await buildErrorMessage(res);
+    throw new Error(message);
+  }
+
+  return res.json().catch(() => ({}));
+}

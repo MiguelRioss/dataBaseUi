@@ -37,7 +37,19 @@ export function mapDbToRows(valObj = {}) {
     const phone = meta.phone ?? "";
     const email = v.email ?? "";
     const shippingCost = meta.shipping_cost_cents ?? 0;
-    const sentShippingEmail = v.sentShippingEmail
+    const sentShippingEmail = v.sentShippingEmail;
+    const paymentStatusRaw =
+      v?.payment_status ??
+      meta?.payment_status ??
+      meta?.paymentStatus ??
+      v?.metadata?.payment_status ??
+      v?.metadata?.paymentStatus;
+    const payment_status =
+      typeof paymentStatusRaw === "boolean"
+        ? paymentStatusRaw
+        : typeof paymentStatusRaw === "string"
+          ? paymentStatusRaw.trim().toLowerCase() === "true"
+          : Boolean(paymentStatusRaw);
     const rawPaymentId =
       meta.payment_id ??
       meta.paymentId ??
@@ -84,6 +96,7 @@ export function mapDbToRows(valObj = {}) {
       email_sent: !!(v?.email_sent ?? v?.email_sended),
       metadata: meta,
       sentShippingEmail,
+      payment_status,
       status,
       status_steps
     };

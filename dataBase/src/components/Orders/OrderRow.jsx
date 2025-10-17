@@ -22,29 +22,46 @@ export default function OrderRow({
   onToggleDelivered, // (orderId, nextVal:boolean) => Promise<void>
   onOpenOrderEdit,
   onSendEmail,
+  onTogglePaymentStatus,
+  togglingPaymentStatus,
+  onSendInvoice,
+  sendingInvoice,
 }) {
   const deliveredOk = !!row?.status?.delivered?.status;
   const trackingCode = String(row?.track_url ?? "").trim();
   const normalizedTrackingCode = trackingCode.toUpperCase();
   const hasTrackingCode =
     normalizedTrackingCode.length > 0 && normalizedTrackingCode.includes("RT");
-  // Detect email already sent from either DB key
   // Detect email already sent from both possible locations (root or metadata)
-  const emailAlreadySent = row.sentShippingEmail
-  console.log(emailAlreadySent)
-
-
+  const emailAlreadySent = row.sentShippingEmail || row.email_sent;
   const emailButtonDisabled = sendingEmail || !hasTrackingCode;
-  const emailButtonLabel = sendingEmail
-    ? "Sending..."
-    : emailAlreadySent
-    ? "Re-Send Email"
-    : "Send Shipping Email";
+  const emailButtonLabel = sendingEmail ? "Sending..." : "Send Shipping Email";
 
   const emailButtonTitle =
     !hasTrackingCode && !sendingEmail
       ? "Add an RT tracking code to enable shipping emails."
-      : undefined;
+      : emailAlreadySent
+        ? "Shipping email already sent; click to send again."
+        : undefined;
+  const canTogglePayment = typeof onTogglePaymentStatus === "function";
+  const paymentStatus = !!row?.payment_status;
+  const paymentButtonLabel = togglingPaymentStatus
+    ? "Updating..."
+    : paymentStatus
+      ? "Paid"
+      : "Unpaid";
+  const paymentButtonTitle = togglingPaymentStatus
+    ? "Updating payment status..."
+    : "Toggle payment status";
+  const paymentButtonClass = `badge ${paymentStatus ? "badge--ok" : "badge--no"}`;
+  const sendingInvoiceActive = !!sendingInvoice;
+  const invoiceButtonDisabled = sendingInvoiceActive;
+  const invoiceButtonLabel = sendingInvoiceActive
+    ? "Sending..."
+    : "Send Invoice (Admin Email)";
+  const invoiceButtonTitle = sendingInvoiceActive
+    ? "Sending invoice email..."
+    : "Send invoice details to the admin email.";
 
   return (
     <tr key={row.id}>
@@ -102,6 +119,46 @@ export default function OrderRow({
         ) : (
           <span className="muted">—</span>
         )}
+      </td>
+
+      <td>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 8,
+            alignItems: "stretch",
+          }}
+        >
+          {canTogglePayment ? (
+            <button
+              type="button"
+              onClick={() =>
+                !togglingPaymentStatus &&
+                onTogglePaymentStatus?.(row.id, !paymentStatus)
+              }
+              className={paymentButtonClass}
+              style={{
+                cursor: togglingPaymentStatus ? "wait" : "pointer",
+              }}
+              disabled={togglingPaymentStatus}
+              title={paymentButtonTitle}
+            >
+              {paymentButtonLabel}
+            </button>
+          ) : (
+            <span className={paymentButtonClass}>{paymentButtonLabel}</span>
+          )}
+          <button
+            className="btn btn--ghost"
+            type="button"
+            onClick={() => onSendInvoice?.(row)}
+            disabled={invoiceButtonDisabled}
+            title={invoiceButtonTitle}
+          >
+            {invoiceButtonLabel}
+          </button>
+        </div>
       </td>
 
       <td>

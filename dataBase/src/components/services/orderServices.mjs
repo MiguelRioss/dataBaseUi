@@ -124,8 +124,14 @@ export async function updateTrackUrl(orderId, trackUrl) {
   return patchOrder(orderId, { track_url: trackUrl });
 }
 
+export async function updatePaymentStatus(orderId, paymentStatus) {
+  if (!orderId) throw new Error("Order id is required");
+  const normalized = !!paymentStatus;
+  await patchOrder(orderId, { payment_status: normalized });
+  return normalized;
+}
+
 export async function createOrderServices(order) {
   const response = await createOrder(order);
   return response?.order ?? response;
 }
-

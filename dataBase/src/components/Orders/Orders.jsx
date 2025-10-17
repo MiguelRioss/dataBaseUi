@@ -6,11 +6,12 @@ import {
   getOrderById,
   updateOrderStatus,
   updateTrackUrl,
+  updatePaymentStatus,
 } from "../services/orderServices.mjs";
 import { patchAllOrderFlags } from "../services/cttPatch";
 import NewOrderPopup from "./commonFiles/NewOrder/NewOrderPopUp";
 import { mapDbToRows, buildCttUrl } from "./commonFiles/PopUp/utils/utils";
-import { sendShippingEmail } from "../services/emailServices.mjs";
+import { sendShippingEmail, sendInvoiceEmail } from "../services/emailServices.mjs";
 import {
   SHIPMENT_STATUS_KEYS,
   SHIPMENT_STATUS_LABELS,
@@ -24,6 +25,9 @@ export default function Orders() {
   const [editingId, setEditingId] = React.useState(null);
   const [savingId, setSavingId] = React.useState(null);
   const [sendingEmailId, setSendingEmailId] = React.useState(null);
+  const [sendingInvoiceId, setSendingInvoiceId] = React.useState(null);
+  const [updatingPaymentStatusId, setUpdatingPaymentStatusId] =
+    React.useState(null);
   const [sort, setSort] = React.useState({ key: "date", dir: "desc" });
   const [searchTerm, setSearchTerm] = React.useState("");
   const manualOrderRef = React.useRef(null);
@@ -82,6 +86,27 @@ export default function Orders() {
 
     return handleUpdateStatus(orderId, patch);
   }
+
+  const handleTogglePaymentStatus = React.useCallback(
+    async (orderId, nextStatus) => {
+      if (!orderId) return;
+      try {
+        setError("");
+        setUpdatingPaymentStatusId(orderId);
+        await updatePaymentStatus(orderId, nextStatus);
+        setRows((prev) =>
+          prev.map((row) =>
+            row.id === orderId ? { ...row, payment_status: nextStatus } : row
+          )
+        );
+      } catch (e) {
+        setError(e.message || String(e));
+      } finally {
+        setUpdatingPaymentStatusId(null);
+      }
+    },
+    [setRows, setError, updatePaymentStatus]
+  );
 
   const handleSendEmail = React.useCallback(
     async (row) => {
@@ -160,6 +185,49 @@ export default function Orders() {
     ]
   );
 
+  const handleSendInvoice = React.useCallback(
+    async (row) => {
+      if (!row) return;
+      if (sendingInvoiceId) return;
+
+      try {
+        setError("");
+        setSendingInvoiceId(row.id);
+
+        const order = await getOrderById(row.id);
+        if (!order) throw new Error("Order details not found.");
+
+        const invoiceId =
+          order?.invoice_id ??
+          order?.metadata?.invoice_id ??
+          order?.metadata?.invoiceId;
+
+        const adminEmail =
+          order?.metadata?.admin_email ??
+          order?.metadata?.adminEmail ??
+          order?.admin_email ??
+          order?.adminEmail;
+
+        if (!adminEmail) {
+          throw new Error("Admin email is missing for this order.");
+        }
+
+        await sendInvoiceEmail({
+          order,
+          orderId: row.id,
+          invoiceId,
+          adminEmail,
+          live: true,
+        });
+      } catch (err) {
+        setError(err?.message || "Failed to send invoice email.");
+      } finally {
+        setSendingInvoiceId(null);
+      }
+    },
+    [sendingInvoiceId, getOrderById, sendInvoiceEmail, setError]
+  );
+
   const handleOpenOrderEdit = React.useCallback(
     (orderId) => {
       try {
@@ -224,6 +292,7 @@ export default function Orders() {
     customer: (r) => (r.name || "").toLowerCase(),
     email: (r) => (r.email || "").toLowerCase(),
     payment: (r) => String(r.payment_id || "").toLowerCase(),
+    payment_status: (r) => (r.payment_status ? 1 : 0),
     price: (r) => (Number.isFinite(r.amount) ? r.amount : 0),
     status: (r) => {
       const deliveredRank = r?.status?.delivered?.status ? 0 : 1;
@@ -237,7 +306,7 @@ export default function Orders() {
     setSort((prev) => {
       if (prev.key === key)
         return { key, dir: prev.dir === "asc" ? "desc" : "asc" };
-      const defaultDir = ["date", "price", "completed"].includes(key)
+      const defaultDir = ["date", "price", "completed", "payment_status"].includes(key)
         ? "desc"
         : "asc";
       return { key, dir: defaultDir };
@@ -260,7 +329,19 @@ export default function Orders() {
       const emailMatch = String(row.email ?? "")
         .toLowerCase()
         .includes(query);
-      return idMatch || paymentMatch || nameMatch || emailMatch;
+      const paymentStatusLabel = row.payment_status ? "paid" : "unpaid";
+      const paymentStatusMatch =
+        paymentStatusLabel.includes(query) ||
+        String(row.payment_status ?? "")
+          .toLowerCase()
+          .includes(query);
+      return (
+        idMatch ||
+        paymentMatch ||
+        nameMatch ||
+        emailMatch ||
+        paymentStatusMatch
+      );
     });
   }, [rows, searchTerm]);
 
@@ -383,6 +464,12 @@ export default function Orders() {
                     onToggle={toggleSort}
                   />
                   <th>Track URL</th>
+                  <SortableTh
+                    label="Payment Status"
+                    colKey="payment_status"
+                    sort={sort}
+                    onToggle={toggleSort}
+                  />
                   <th>Actions</th>
                   <SortableTh
                     label="Status"
@@ -414,11 +501,15 @@ export default function Orders() {
                     onCancelEdit={() => setEditingId(null)}
                     onSaveTrackUrl={handleSaveTrackUrl}
                     saving={savingId === r.id}
-                    sendingEmail={sendingEmailId === r.id}
+                    sendingEmail={r.sendingEmail}
                     onUpdateStatus={handleUpdateStatus}
                     onToggleDelivered={handleToggleDelivered}
                     onSendEmail={handleSendEmail}
                     onOpenOrderEdit={handleOpenOrderEdit}
+                    onTogglePaymentStatus={handleTogglePaymentStatus}
+                    togglingPaymentStatus={updatingPaymentStatusId === r.id}
+                    onSendInvoice={handleSendInvoice}
+                    sendingInvoice={sendingInvoiceId === r.id}
                   />
                 ))}
               </tbody>
