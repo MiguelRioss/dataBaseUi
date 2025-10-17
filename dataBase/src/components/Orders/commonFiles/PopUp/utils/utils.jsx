@@ -93,10 +93,10 @@ export function mapDbToRows(valObj = {}) {
       payment_id: paymentId,
       items: Array.isArray(v?.items) ? v.items : [],
       fulfilled: !!v?.fulfilled,
-      email_sent: !!(v?.email_sent ?? v?.email_sended),
       metadata: meta,
       sentShippingEmail,
       payment_status,
+      emailThankYouAdmin : v.email_Sent_ThankYou_Admin ,
       status,
       status_steps
     };

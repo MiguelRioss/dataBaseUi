@@ -11,7 +11,10 @@ import {
 import { patchAllOrderFlags } from "../services/cttPatch";
 import NewOrderPopup from "./commonFiles/NewOrder/NewOrderPopUp";
 import { mapDbToRows, buildCttUrl } from "./commonFiles/PopUp/utils/utils";
-import { sendShippingEmail, sendInvoiceEmail } from "../services/emailServices.mjs";
+import {
+  sendShippingEmail,
+  sendInvoiceEmail,
+} from "../services/emailServices.mjs";
 import {
   SHIPMENT_STATUS_KEYS,
   SHIPMENT_STATUS_LABELS,
@@ -49,8 +52,6 @@ export default function Orders() {
   React.useEffect(() => {
     load();
   }, [load]);
-
-
 
   async function handleUpdateStatus(orderId, patch) {
     try {
@@ -202,16 +203,6 @@ export default function Orders() {
           order?.metadata?.invoice_id ??
           order?.metadata?.invoiceId;
 
-        const adminEmail =
-          order?.metadata?.admin_email ??
-          order?.metadata?.adminEmail ??
-          order?.admin_email ??
-          order?.adminEmail;
-
-        if (!adminEmail) {
-          throw new Error("Admin email is missing for this order.");
-        }
-
         await sendInvoiceEmail({
           order,
           orderId: row.id,
@@ -306,7 +297,12 @@ export default function Orders() {
     setSort((prev) => {
       if (prev.key === key)
         return { key, dir: prev.dir === "asc" ? "desc" : "asc" };
-      const defaultDir = ["date", "price", "completed", "payment_status"].includes(key)
+      const defaultDir = [
+        "date",
+        "price",
+        "completed",
+        "payment_status",
+      ].includes(key)
         ? "desc"
         : "asc";
       return { key, dir: defaultDir };
@@ -336,11 +332,7 @@ export default function Orders() {
           .toLowerCase()
           .includes(query);
       return (
-        idMatch ||
-        paymentMatch ||
-        nameMatch ||
-        emailMatch ||
-        paymentStatusMatch
+        idMatch || paymentMatch || nameMatch || emailMatch || paymentStatusMatch
       );
     });
   }, [rows, searchTerm]);
@@ -492,26 +484,30 @@ export default function Orders() {
                 </tr>
               </thead>
               <tbody>
-                {sortedRows.map((r) => (
-                  <OrderRow
-                    key={r.id}
-                    row={r}
-                    isEditing={editingId === r.id}
-                    onEdit={() => setEditingId(r.id)}
-                    onCancelEdit={() => setEditingId(null)}
-                    onSaveTrackUrl={handleSaveTrackUrl}
-                    saving={savingId === r.id}
-                    sendingEmail={r.sendingEmail}
-                    onUpdateStatus={handleUpdateStatus}
-                    onToggleDelivered={handleToggleDelivered}
-                    onSendEmail={handleSendEmail}
-                    onOpenOrderEdit={handleOpenOrderEdit}
-                    onTogglePaymentStatus={handleTogglePaymentStatus}
-                    togglingPaymentStatus={updatingPaymentStatusId === r.id}
-                    onSendInvoice={handleSendInvoice}
-                    sendingInvoice={sendingInvoiceId === r.id}
-                  />
-                ))}
+                {sortedRows.map((r) => {
+                  console.log("[Orders.jsx] Row data before rendering:", r); // 🧾 DEBUG
+                  return (
+                    <OrderRow
+                      key={r.id}
+                      row={r}
+                      isEditing={editingId === r.id}
+                      onEdit={() => setEditingId(r.id)}
+                      onCancelEdit={() => setEditingId(null)}
+                      onSaveTrackUrl={handleSaveTrackUrl}
+                      saving={savingId === r.id}
+                      sendingEmail={sendingEmailId === r.id} // ✅ boolean, not sendingEmailId
+                      onUpdateStatus={handleUpdateStatus}
+                      onToggleDelivered={handleToggleDelivered}
+                      onSendEmail={handleSendEmail}
+                      onOpenOrderEdit={handleOpenOrderEdit}
+                      onTogglePaymentStatus={handleTogglePaymentStatus}
+                      togglingPaymentStatus={updatingPaymentStatusId === r.id}
+                      onSendInvoice={handleSendInvoice}
+                      paymentStatus={r.payment_status} // ✅ matches DB key
+                      emailSentThankYouAdmin={r.emailThankYouAdmin} // ✅ matches DB key
+                    />
+                  );
+                })}
               </tbody>
             </table>
           </div>

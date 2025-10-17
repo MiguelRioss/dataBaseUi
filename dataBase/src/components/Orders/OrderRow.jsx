@@ -5,9 +5,6 @@ import { centsToEUR, buildCttUrl } from "./commonFiles/PopUp/utils/utils";
 import ProductsPopup from "./commonFiles/PopUp/ProductsPopup";
 import StatusBadge from "./commonFiles/StatusBadge";
 
-// NOTE: we won't import Badge here so we can make the cell clickable using the same classes.
-// If you prefer to keep <Badge />, see the comment near the bottom.
-
 export default function OrderRow({
   row,
   isEditing,
@@ -15,60 +12,64 @@ export default function OrderRow({
   onCancelEdit,
   onSaveTrackUrl,
   saving,
-  sendingEmail,
-
-  // NEW - pass from parent:
-  onUpdateStatus, // (orderId, flatPatch) => Promise<void>
-  onToggleDelivered, // (orderId, nextVal:boolean) => Promise<void>
+  sendingEmail, // ✅ now boolean from parent (sendingEmailId === row.id)
+  onUpdateStatus,
+  onToggleDelivered,
   onOpenOrderEdit,
   onSendEmail,
   onTogglePaymentStatus,
   togglingPaymentStatus,
   onSendInvoice,
-  sendingInvoice,
+  paymentStatus, // ✅ DB: payment_status
+  emailSentThankYouAdmin, // ✅ DB: email_Sent_ThankYou_Admin
 }) {
   const deliveredOk = !!row?.status?.delivered?.status;
   const trackingCode = String(row?.track_url ?? "").trim();
   const normalizedTrackingCode = trackingCode.toUpperCase();
   const hasTrackingCode =
     normalizedTrackingCode.length > 0 && normalizedTrackingCode.includes("RT");
-  // Detect email already sent from both possible locations (root or metadata)
+
+  // --- Tracking Email ---
   const emailAlreadySent = row.sentShippingEmail || row.email_sent;
   const emailButtonDisabled = sendingEmail || !hasTrackingCode;
-  const emailButtonLabel = sendingEmail ? "Sending..." : "Send Shipping Email";
+  let emailButtonLabel = "Send Tracking Email";
+  if (sendingEmail) emailButtonLabel = "Sending...";
+  else if (emailAlreadySent) emailButtonLabel = "Re-send Tracking Email";
 
-  const emailButtonTitle =
-    !hasTrackingCode && !sendingEmail
-      ? "Add an RT tracking code to enable shipping emails."
-      : emailAlreadySent
-        ? "Shipping email already sent; click to send again."
-        : undefined;
+  // --- Payment Status ---
   const canTogglePayment = typeof onTogglePaymentStatus === "function";
-  const paymentStatus = !!row?.payment_status;
+  const isPaid = !!paymentStatus;
   const paymentButtonLabel = togglingPaymentStatus
     ? "Updating..."
-    : paymentStatus
-      ? "Paid"
-      : "Unpaid";
+    : isPaid
+    ? "Paid"
+    : "Unpaid";
   const paymentButtonTitle = togglingPaymentStatus
     ? "Updating payment status..."
     : "Toggle payment status";
-  const paymentButtonClass = `badge ${paymentStatus ? "badge--ok" : "badge--no"}`;
-  const sendingInvoiceActive = !!sendingInvoice;
-  const invoiceButtonDisabled = sendingInvoiceActive;
-  const invoiceButtonLabel = sendingInvoiceActive
-    ? "Sending..."
-    : "Send Invoice (Admin Email)";
-  const invoiceButtonTitle = sendingInvoiceActive
-    ? "Sending invoice email..."
-    : "Send invoice details to the admin email.";
+  const paymentButtonClass = `badge ${isPaid ? "badge--ok" : "badge--no"}`;
 
+  // --- Invoice / Admin Email Button ---
+  console.log("Email sent ? ", emailSentThankYouAdmin)
+  const invoiceAlreadySent = !!emailSentThankYouAdmin; // ✅ DB flag
+  const invoiceButtonDisabled = !isPaid || sendingEmail;
+
+  let invoiceButtonLabel;
+  if (sendingEmail) invoiceButtonLabel = "Sending...";
+  else if (invoiceAlreadySent)
+    invoiceButtonLabel = "Re-send Shipping + Admin Email";
+  else invoiceButtonLabel = "Send Shipping + Admin Email";
+
+  const invoiceButtonTitle = !isPaid
+    ? "Payment must be marked as paid before sending shipping/admin emails."
+    : invoiceAlreadySent
+    ? "This email was already sent. Click to re-send."
+    : "Send shipping confirmation to customer and admin.";
+    
   return (
     <tr key={row.id}>
       <td data-mono>{row.id}</td>
-      <td>
-        {row.payment_id ? row.payment_id : <span className="muted">-</span>}
-      </td>
+      <td>{row.payment_id || <span className="muted">-</span>}</td>
       <td style={{ whiteSpace: "nowrap" }}>
         {row.date ? row.date.toLocaleString() : "-"}
       </td>
@@ -121,6 +122,7 @@ export default function OrderRow({
         )}
       </td>
 
+      {/* Payment + Email buttons */}
       <td>
         <div
           style={{
@@ -135,12 +137,10 @@ export default function OrderRow({
               type="button"
               onClick={() =>
                 !togglingPaymentStatus &&
-                onTogglePaymentStatus?.(row.id, !paymentStatus)
+                onTogglePaymentStatus?.(row.id, !isPaid)
               }
               className={paymentButtonClass}
-              style={{
-                cursor: togglingPaymentStatus ? "wait" : "pointer",
-              }}
+              style={{ cursor: togglingPaymentStatus ? "wait" : "pointer" }}
               disabled={togglingPaymentStatus}
               title={paymentButtonTitle}
             >
@@ -149,6 +149,7 @@ export default function OrderRow({
           ) : (
             <span className={paymentButtonClass}>{paymentButtonLabel}</span>
           )}
+
           <button
             className="btn btn--ghost"
             type="button"
@@ -161,6 +162,7 @@ export default function OrderRow({
         </div>
       </td>
 
+      {/* Action Buttons */}
       <td>
         <div
           style={{
@@ -170,11 +172,11 @@ export default function OrderRow({
             alignItems: "stretch",
           }}
         >
-          {!isEditing ? (
+          {!isEditing && (
             <button className="btn" onClick={() => onEdit?.(row.id)}>
               Edit Tracking
             </button>
-          ) : null}
+          )}
           <button
             className="btn btn--ghost"
             type="button"
@@ -187,14 +189,13 @@ export default function OrderRow({
             type="button"
             onClick={() => onSendEmail?.(row)}
             disabled={emailButtonDisabled}
-            title={emailButtonTitle}
           >
             {emailButtonLabel}
           </button>
         </div>
       </td>
 
-      {/* STATUS POPUP - now receives a save handler */}
+      {/* STATUS POPUP */}
       <td>
         <StatusPopUp
           status={row.status}
@@ -202,7 +203,7 @@ export default function OrderRow({
         />
       </td>
       <td>
-        <StatusBadge status={row.status}></StatusBadge>
+        <StatusBadge status={row.status} />
       </td>
       <td>
         <button
