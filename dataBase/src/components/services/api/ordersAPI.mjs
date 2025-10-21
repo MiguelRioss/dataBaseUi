@@ -50,19 +50,41 @@ export async function patchOrder(selector, changes) {
     throw new Error("patchOrder requires an orderId, orders array, or tracking code.");
   }
 
-  const res = await fetch(`${API_BASE}/api/orders`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-  if (!res.ok) {
+  const body = JSON.stringify(payload);
+  const singleOrderTarget =
+    !!payload.orderId && !payload.orders && !payload.tracking;
+
+  async function sendPatch(url) {
+    const res = await fetch(url, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body,
+    });
+    if (res.ok) {
+      return res.json();
+    }
     let msg = `HTTP ${res.status}`;
     try {
       const j = await res.json();
       if (j?.error) msg += `: ${j.error}`;
       if (j?.detail) msg += ` - ${j.detail}`;
     } catch {}
-    throw new Error(msg);
+    const error = new Error(msg);
+    error.status = res.status;
+    throw error;
   }
-  return res.json();
+
+  if (singleOrderTarget) {
+    const orderUrl = `${API_BASE}/api/orders/${encodeURIComponent(payload.orderId)}`;
+    try {
+      return await sendPatch(orderUrl);
+    } catch (err) {
+      if (err?.status !== 404) {
+        throw err;
+      }
+      // Fall through to legacy endpoint (/api/orders) when the new route is absent.
+    }
+  }
+
+  return sendPatch(`${API_BASE}/api/orders`);
 }

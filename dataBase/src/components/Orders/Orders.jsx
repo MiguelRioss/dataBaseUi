@@ -7,7 +7,7 @@ import {
   updateOrderStatus,
   updateTrackUrl,
   updatePaymentStatus,
-  updateShippingEmailStatus
+  updateShippingEmailStatus,
 } from "../services/orderServices.mjs";
 import { patchAllOrderFlags } from "../services/cttPatch";
 import NewOrderPopup from "./commonFiles/NewOrder/NewOrderPopUp";
@@ -110,82 +110,80 @@ export default function Orders() {
     [setRows, setError, updatePaymentStatus]
   );
 
-  const handleSendEmail = React.useCallback(
-    async (row) => {
-      if (!row) return;
-      const trackingCode = String(row.track_url ?? "").trim();
-      const normalizedTracking = trackingCode.toUpperCase();
-      const hasTracking =
-        normalizedTracking.length > 0 && normalizedTracking.includes("RT");
+  const handleSendEmail = React.useCallback(async (row) => {
+    if (!row) return;
+    const trackingCode = String(row.track_url ?? "").trim();
+    const normalizedTracking = trackingCode.toUpperCase();
+    const hasTracking =
+      normalizedTracking.length > 0 && normalizedTracking.includes("RT");
 
-      if (!hasTracking) {
-        setError("Add the RT tracking code before sending the shipping email.");
-        return;
-      }
+    if (!hasTracking) {
+      setError("Add the RT tracking code before sending the shipping email.");
+      return;
+    }
 
-      if (!row.email) {
-        setError("Customer email is missing for this order.");
-        return;
-      }
+    if (!row.email) {
+      setError("Customer email is missing for this order.");
+      return;
+    }
 
-      if (sendingEmailId) return;
+    if (sendingEmailId) return;
 
-      try {
-        setError("");
-        setSendingEmailId(row.id);
+    try {
+      setError("");
+      setSendingEmailId(row.id);
 
-        const order = await getOrderById(row.id);
-        if (!order) throw new Error("Order details not found.");
+      const order = await getOrderById(row.id);
+      if (!order) throw new Error("Order details not found.");
 
-        const orderDate =
-          order?.written_at ??
-          (typeof row?.date?.toISOString === "function"
-            ? row.date.toISOString()
-            : undefined);
+      const orderDate =
+        order?.written_at ??
+        (typeof row?.date?.toISOString === "function"
+          ? row.date.toISOString()
+          : undefined);
 
-        const invoiceId =
-          order?.invoice_id ??
-          order?.metadata?.invoice_id ??
-          order?.metadata?.invoiceId;
+      const invoiceId =
+        order?.invoice_id ??
+        order?.metadata?.invoice_id ??
+        order?.metadata?.invoiceId;
 
-        const locale =
-          order?.metadata?.locale ??
-          order?.metadata?.lang ??
-          order?.metadata?.language;
+      const locale =
+        order?.metadata?.locale ??
+        order?.metadata?.lang ??
+        order?.metadata?.language;
 
-        // ✅ 1️⃣ Send the actual email
-        await sendShippingEmail({
-          order,
-          orderId: row.id,
-          orderDate,
-          invoiceId,
-          trackingNumber: trackingCode,
-          trackingUrl: buildCttUrl(trackingCode),
-          locale,
-          live: true,
-        });
+      // ✅ 1️⃣ Send the actual email
+      await sendShippingEmail({
+        order,
+        orderId: row.id,
+        orderDate,
+        invoiceId,
+        trackingNumber: trackingCode,
+        trackingUrl: buildCttUrl(trackingCode),
+        locale,
+        live: true,
+      });
 
-        // ✅ 2️⃣ Persist flag to DB
-        await updateShippingEmailStatus(row.id, true);
-        console.log(
-          `[Orders.jsx] DB updated: sentShippingEmail=true for ${row.id}`
-        );
+      // ✅ 2️⃣ Persist flag to DB
+      await updateShippingEmailStatus(row.id, true);
+      console.log(
+        `[Orders.jsx] DB updated: sentShippingEmail=true for ${row.id}`
+      );
 
-        // ✅ 3️⃣ Update local UI immediately
-        setRows((prev) =>
-          prev.map((existing) =>
-            existing.id === row.id
-              ? { ...existing, sentShippingEmail: true }
-              : existing
-          )
-        );
-      } catch (err) {
-        setError(err?.message || "Failed to send shipping email.");
-      } finally {
-        setSendingEmailId(null);
-      }
-    },
-  );
+      // ✅ 3️⃣ Update local UI immediately
+      setRows((prev) =>
+        prev.map((existing) =>
+          existing.id === row.id
+            ? { ...existing, sentShippingEmail: true }
+            : existing
+        )
+      );
+    } catch (err) {
+      setError(err?.message || "Failed to send shipping email.");
+    } finally {
+      setSendingEmailId(null);
+    }
+  });
 
   const handleSendInvoice = React.useCallback(
     async (row) => {
@@ -257,9 +255,18 @@ export default function Orders() {
   const logThenPatchOrders = React.useCallback(async () => {
     setScanLoading(true);
     try {
-      await patchAllOrderFlags();
+      console.log("[Orders.jsx] 🔄 Triggering Pi patch job...");
+      const results = await patchAllOrderFlags();
+      console.log(
+        "[Orders.jsx] ✅ Pi job done:",
+        results.length,
+        "orders patched"
+      );
+      console.log("[Orders.jsx] 🔁 Reloading updated orders from DB...");
       await load();
+      console.log("[Orders.jsx] ✅ Orders reloaded");
     } catch (e) {
+      console.error("[Orders.jsx] ❌ Patch failed:", e);
       setError(e.message);
     } finally {
       setScanLoading(false);
