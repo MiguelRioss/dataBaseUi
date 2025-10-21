@@ -36,11 +36,24 @@ export async function createOrder(order) {
   return res.json();
 }
 
-export async function patchOrder(id, changes) {
-  const res = await fetch(`${API_BASE}/api/orders/${encodeURIComponent(id)}`, {
+export async function patchOrder(selector, changes) {
+  const payload =
+    selector && typeof selector === "object" && !Array.isArray(selector)
+      ? { ...selector }
+      : { orderId: selector };
+
+  if (changes !== undefined) {
+    payload.changes = changes;
+  }
+
+  if (!payload.orderId && !payload.orders && !payload.tracking) {
+    throw new Error("patchOrder requires an orderId, orders array, or tracking code.");
+  }
+
+  const res = await fetch(`${API_BASE}/api/orders`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ changes }),
+    body: JSON.stringify(payload),
   });
   if (!res.ok) {
     let msg = `HTTP ${res.status}`;

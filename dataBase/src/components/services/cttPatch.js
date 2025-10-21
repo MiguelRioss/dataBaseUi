@@ -2,7 +2,7 @@
 import { API_BASE } from "./apiBase";
 
 /**
- * Patch a single order: PATCH /api/orders/:id with { status }.
+ * Patch a single order: PATCH /api/orders with { orderId, changes }.
  * Skips if no RT or already delivered.
  */
 export async function patchOrderFlags({ orderId, trackUrl, status }) {
@@ -18,7 +18,7 @@ export async function patchOrderFlags({ orderId, trackUrl, status }) {
   try {
     // 1. Fetch CTT tracking info
     const URL_FETCH_CTT = API_BASE + `/api/ctt?rt=${trackUrl}`;
-    console.log(`[FETCH CTT] Order ${orderId} → ${URL_FETCH_CTT}`);
+    console.log(`[FETCH CTT] Order ${orderId} -> ${URL_FETCH_CTT}`);
 
     const response = await fetch(URL_FETCH_CTT);
     if (!response.ok) {
@@ -35,10 +35,10 @@ export async function patchOrderFlags({ orderId, trackUrl, status }) {
     }
 
     // 3. Build patch body
-    const changes = { changes: { status: summary } };
+    const changes = { orderId, changes: { status: summary } };
 
     // 4. Call PATCH API
-    const URL_PATCH = API_BASE + `/api/orders/${orderId}`;
+    const URL_PATCH = API_BASE + `/api/orders`;
     const patchResponse = await fetch(URL_PATCH, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
