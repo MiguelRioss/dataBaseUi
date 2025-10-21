@@ -1,5 +1,5 @@
 // Raspberry Pi API (Tailscale or local)
-export const API_BASE_PI = "http://100.91.230.15:3000"
+export const API_BASE_PI = "https://100.91.230.15:3000"
 /**
  * Ask the Raspberry Pi API to process all orders.
  * PATCH /api/orders  → the Pi fetches from DB and patches via Puppeteer
