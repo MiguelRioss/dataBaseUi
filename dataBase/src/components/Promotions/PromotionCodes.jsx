@@ -12,6 +12,23 @@ const VIEW_MODES = {
   CREATE: "create",
 };
 
+function resolvePromoId(item) {
+  if (!item || typeof item !== "object") return null;
+  return item.id ?? item.code ?? item.slug ?? item.name ?? null;
+}
+
+function isPromoActive(item) {
+  if (!item || typeof item !== "object") return false;
+  if (typeof item.status === "boolean") return item.status;
+  if (typeof item.active === "boolean") return item.active;
+  if (typeof item.enabled === "boolean") return item.enabled;
+  if (typeof item.status === "string") {
+    const lowered = item.status.toLowerCase();
+    return lowered === "active" || lowered === "enabled";
+  }
+  return Boolean(item.active ?? item.enabled ?? item.status);
+}
+
 export default function PromotionCodes() {
   const [form, setForm] = React.useState(() => ({ ...DEFAULT_FORM }));
   const [loading, setLoading] = React.useState(false);
@@ -21,6 +38,7 @@ export default function PromotionCodes() {
   const [codes, setCodes] = React.useState([]);
   const [codesLoading, setCodesLoading] = React.useState(true);
   const [codesError, setCodesError] = React.useState("");
+  const [updatingId, setUpdatingId] = React.useState(null);
   const apiBase = React.useMemo(() => resolveApiBase(), []);
 
   const fetchCodes = React.useCallback(async () => {
@@ -96,6 +114,66 @@ export default function PromotionCodes() {
       setError(e.message || String(e));
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleToggleStatus(item) {
+    const id = resolvePromoId(item);
+    if (!id) {
+      setError("Unable to toggle this code: missing identifier.");
+      return;
+    }
+
+    const nextActive = !isPromoActive(item);
+    setUpdatingId(id);
+    setError("");
+    setSuccess("");
+
+    setCodes((prev) =>
+      prev.map((entry) => {
+        const entryId = resolvePromoId(entry);
+        if (entryId !== id) return entry;
+
+        const nextEntry = { ...entry };
+        if ("active" in entry) nextEntry.active = nextActive;
+        if ("enabled" in entry) nextEntry.enabled = nextActive;
+        if ("status" in entry) {
+          if (typeof entry.status === "boolean") {
+            nextEntry.status = nextActive;
+          } else {
+            nextEntry.status = nextActive ? "Active" : "Inactive";
+          }
+        } else {
+          nextEntry.status = nextActive;
+        }
+        return nextEntry;
+      })
+    );
+
+    try {
+      const res = await fetch(
+        `${apiBase}/api/promoCodes/${encodeURIComponent(id)}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            changes: {
+              status: nextActive,
+            },
+          }),
+        }
+      );
+
+      if (!res.ok)
+        throw new Error(`Failed to update promo code (${res.status})`);
+
+      // Refresh to reflect backend truth in case it transforms data
+      fetchCodes();
+    } catch (e) {
+      setError(e.message || String(e));
+      fetchCodes();
+    } finally {
+      setUpdatingId(null);
     }
   }
 
@@ -209,17 +287,38 @@ export default function PromotionCodes() {
                   </tr>
                 </thead>
                 <tbody>
-                  {codes.map((item) => (
-                    <tr key={item.id || item.code}>
-                      <td>{item.id || "-"}</td>
-                      <td>{item.code || "-"}</td>
-                      <td>{item.name || "-"}</td>
-                      <td>{item.type || "-"}</td>
-                      <td>{item.value ? `${item.value}%` : "-"}</td>
-                      <td>{formatDate(item.created)}</td>
-                      <td>{item.status ? "Active" : "Disabled"}</td>
-                    </tr>
-                  ))}
+                  {codes.map((item, idx) => {
+                    const rowId = resolvePromoId(item);
+                    const isActive = isPromoActive(item);
+                    const isUpdating = updatingId === rowId;
+                    const statusLabel = isUpdating
+                      ? "Updating..."
+                      : isActive
+                      ? "Active"
+                      : "Inactive";
+                    return (
+                      <tr key={rowId || `promo-${idx}`}>
+                        <td>{item.id || "-"}</td>
+                        <td>{item.code || "-"}</td>
+                        <td>{item.name || "-"}</td>
+                        <td>{item.type || "-"}</td>
+                        <td>{item.value ? `${item.value}%` : "-"}</td>
+                        <td>{formatDate(item.created)}</td>
+                        <td>
+                          <button
+                            type="button"
+                            className={`badge order-row__payment ${
+                              isActive ? "badge--ok" : "badge--no"
+                            }`}
+                            onClick={() => handleToggleStatus(item)}
+                            disabled={isUpdating}
+                          >
+                            {statusLabel}
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
