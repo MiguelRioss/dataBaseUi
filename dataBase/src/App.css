@@ -127,7 +127,7 @@ a:hover{ color: var(--accent-2); }
 }
 
 .btn--xl{
-  padding: 14px 28px;
+  padding: 14px 10px;
   font-size: 16px;
   line-height: 1.2;
   border-radius: 14px;
@@ -338,6 +338,32 @@ a:hover{ color: var(--accent-2); }
 .badge--ok{ color:#10b981; border-color: rgba(16,185,129,.45); background: rgba(16,185,129,.08); }
 .badge--no{ color:#f59e0b; border-color: rgba(245,158,11,.4); background: rgba(245,158,11,.08); }
 
+.order-row__payment{
+  padding: 10px 20px;
+  min-width: 140px;
+  justify-content: center;
+  font-size: 13px;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  border-width: 2px;
+  box-shadow: 0 12px 26px rgba(249,115,22,.12);
+}
+.order-row__payment.badge--ok{
+  background: linear-gradient(180deg, rgba(52,211,153,.28), rgba(16,185,129,.12));
+  border-color: rgba(16,185,129,.6);
+  color: #047857;
+}
+.order-row__payment.badge--no{
+  background: linear-gradient(180deg, rgba(245,158,11,.32), rgba(245,158,11,.14));
+  border-color: rgba(245,158,11,.6);
+  color: #92400e;
+}
+.order-row__payment[disabled],
+.order-row__payment:disabled{
+  opacity: .6;
+  box-shadow: none;
+}
+
 /* ---------- Toolbar (top right sign-out) ---------- */
 .toolbar{
   display:flex; justify-content:flex-end; gap:10px; margin-bottom: 14px;
@@ -400,6 +426,144 @@ a:hover{ color: var(--accent-2); }
   border-radius: 8px;
   background: #fff9f0;
   box-shadow: 0 6px 16px rgba(249,115,22,0.12);
+}
+
+.promo-card{
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+.promo-header{
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+.promo-icon{
+  width: 58px;
+  height: 58px;
+  border-radius: 16px;
+  background: rgba(249,115,22,.12);
+  color: var(--accent);
+  display: grid;
+  place-items: center;
+}
+.promo-icon svg{
+  width: 34px;
+  height: 34px;
+}
+.promo-title{
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: .02em;
+}
+.promo-subtitle{
+  margin: 6px 0 0;
+  font-size: 13px;
+  max-width: 460px;
+}
+.promo-form{
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.promo-field{
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+}
+.promo-field span{
+  font-weight: 600;
+  color: var(--muted);
+  letter-spacing: .02em;
+}
+.promo-field input,
+.promo-field select{
+  appearance: none;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #ffffff;
+  padding: 10px 12px;
+  margin-left: 5%;
+  font-size: 14px;
+  transition: border-color .16s ease, box-shadow .16s ease, background .16s ease;
+}
+.promo-field input:focus,
+.promo-field select:focus{
+  outline: none;
+  border-color: rgba(249,115,22,.6);
+  box-shadow: 0 0 0 3px rgba(249,115,22,.18);
+  background: #fff4e3;
+}
+.promo-field--row{
+  display: grid;
+  gap: 14px;
+}
+@media (min-width: 720px){
+  .promo-field--row{
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: flex-end;
+  }
+}
+.promo-alert{
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-size: 13px;
+}
+.promo-alert--error{
+  border: 1px solid rgba(239,68,68,.35);
+  background: rgba(239,68,68,.15);
+  color: #b91c1c;
+}
+.promo-alert--success{
+  border: 1px solid rgba(34,197,94,.35);
+  background: rgba(34,197,94,.12);
+  color: #047857;
+}
+.promo-submit{
+  align-self: flex-start;
+  min-width: 180px;
+}
+.promo-actions{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.promo-list{
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.promo-empty{
+  padding: 12px 0;
+  font-size: 14px;
+}
+.promo-table-wrapper{
+  overflow-x: auto;
+}
+.promo-table{
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 540px;
+}
+.promo-table th,
+.promo-table td{
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  font-size: 13px;
+}
+.promo-table thead th{
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  font-size: 11px;
+  color: var(--muted);
+  background: rgba(249,115,22,.08);
+}
+.promo-table tbody tr:hover{
+  background: rgba(249,115,22,.06);
 }
 
 /* ---------- Modal ---------- */

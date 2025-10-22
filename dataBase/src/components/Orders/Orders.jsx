@@ -391,7 +391,7 @@ export default function Orders() {
           </div>
         ) : null}
 
-        <div className="mt-4 w-full sm:max-w-md">
+        <div className="mt-4 w-full">
           <label
             htmlFor="orders-search"
             className="block text-sm font-medium text-gray-300 mb-1"

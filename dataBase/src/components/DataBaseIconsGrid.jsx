@@ -101,6 +101,35 @@ export default function DataBaseIconsGrid({ selected, onSelect }) {
         </svg>
       ),
     },
+    {
+      key: "promotions",
+      title: "Promo Codes",
+      subtitle: "Create and manage discounts",
+      icon: (
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden>
+          <path
+            d="M5.5 3h6.38c.35 0 .68.14.92.38l5.82 5.82a1.3 1.3 0 0 1 0 1.84l-6.36 6.36a1.3 1.3 0 0 1-1.84 0L4.62 11.6A1.3 1.3 0 0 1 4.25 10.7L4 5.5A2.5 2.5 0 0 1 5.5 3Z"
+            stroke="currentColor"
+            strokeWidth="1.3"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          <circle
+            cx="8.75"
+            cy="7.25"
+            r="1.25"
+            stroke="currentColor"
+            strokeWidth="1.1"
+          />
+          <path
+            d="M14 9.5 9.5 14"
+            stroke="currentColor"
+            strokeWidth="1.3"
+            strokeLinecap="round"
+          />
+        </svg>
+      ),
+    },
   ];
 
   return (

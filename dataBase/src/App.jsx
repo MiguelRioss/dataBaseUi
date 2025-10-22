@@ -7,13 +7,14 @@ import Login from "./components/Login";
 import DataBaseIconsGrid from "./components/DataBaseIconsGrid";
 import "./App.css";
 import Inventory from "./components/Inventory/Inventory";
+import PromotionCodes from "./components/Promotions/PromotionCodes";
 
 export default function App() {
   const [user, setUser] = React.useState(null);
   const [checking, setChecking] = React.useState(true);
   const [isAdmin, setIsAdmin] = React.useState(null);
 
-  // which admin view is open: 'orders' | 'images'
+  // which admin view is open: 'orders' | 'images' | 'Inventory' | 'promotions'
   const [selectedView, setSelectedView] = React.useState("orders");
 
   // Listen to auth user
@@ -82,6 +83,7 @@ export default function App() {
           </div>
         )}
         {selectedView === "Inventory" && <Inventory />}
+        {selectedView === "promotions" && <PromotionCodes />}
       </div>
     </div>
   );

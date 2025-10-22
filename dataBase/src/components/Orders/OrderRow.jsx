@@ -48,7 +48,9 @@ export default function OrderRow({
   const paymentButtonTitle = togglingPaymentStatus
     ? "Updating payment status..."
     : "Toggle payment status";
-  const paymentButtonClass = `badge ${isPaid ? "badge--ok" : "badge--no"}`;
+  const paymentButtonClass = `badge order-row__payment ${
+    isPaid ? "badge--ok" : "badge--no"
+  }`;
 
   // --- Invoice / Admin Email Button ---
   console.log("Email sent ? ", emailSentThankYouAdmin);
@@ -58,8 +60,8 @@ export default function OrderRow({
   let invoiceButtonLabel;
   if (sendingInvoice) invoiceButtonLabel = "Sending...";
   else if (invoiceAlreadySent)
-    invoiceButtonLabel = "Re-send Shipping + Admin Email";
-  else invoiceButtonLabel = "Send Shipping + Admin Email";
+    invoiceButtonLabel = "Re-send Thank You + Admin Email";
+  else invoiceButtonLabel = "Send Thank You + Admin Email";
 
   const invoiceButtonTitle = !isPaid
     ? "Payment must be marked as paid before sending shipping/admin emails."
@@ -152,7 +154,7 @@ export default function OrderRow({
           )}
 
           <button
-            className="btn btn--ghost"
+            className="btn btn--ghost "
             type="button"
             onClick={() => onSendInvoice?.(row)}
             disabled={invoiceButtonDisabled}
