@@ -358,7 +358,6 @@ export default function PromotionCodes() {
                 disabled={loading}
               >
                 <option value="percentage">Percentage</option>
-                <option value="fixed">Fixed</option>
               </select>
             </label>
           </div>
