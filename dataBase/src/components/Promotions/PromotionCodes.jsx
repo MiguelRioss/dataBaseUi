@@ -3,7 +3,6 @@ import { resolveApiBase } from "../services/apiBase";
 
 const DEFAULT_FORM = {
   name: "",
-  code: "",
   type: "percentage",
   value: 10,
 };
@@ -29,9 +28,6 @@ export default function PromotionCodes() {
     setCodesError("");
     try {
       const res = await fetch(`${apiBase}/api/promoCodes`);
-      if (!res.ok) {
-        throw new Error(`Failed to load promotion codes (status ${res.status})`);
-      }
       const body = await res.json().catch(() => null);
       const collection =
         Array.isArray(body?.data) && body.data.length
@@ -77,21 +73,12 @@ export default function PromotionCodes() {
 
     try {
       const payload = {
-        name: form.name.trim(),
-        code: form.code.trim(),
-        type: form.type,
-        value: form.value,
+        promocode: {
+          name: form.name.trim(),
+          type: form.type,
+          value: form.value,
+        },
       };
-
-      if (!payload.name) {
-        throw new Error("Promotion name is required.");
-      }
-      if (!payload.code) {
-        throw new Error("Promotion code is required.");
-      }
-      if (payload.value <= 0) {
-        throw new Error("Percentage must be greater than zero.");
-      }
 
       const res = await fetch(`${apiBase}/api/promoCodes`, {
         method: "POST",
@@ -99,14 +86,7 @@ export default function PromotionCodes() {
         body: JSON.stringify(payload),
       });
 
-      if (!res.ok) {
-        const details = await res.json().catch(() => null);
-        const message =
-          details?.error ||
-          details?.message ||
-          `Request failed with status ${res.status}`;
-        throw new Error(message);
-      }
+      if (!res.ok) throw new Error(`Failed to create promo code (${res.status})`);
 
       setSuccess("Promotion code created successfully.");
       setForm(() => ({ ...DEFAULT_FORM }));
@@ -131,15 +111,6 @@ export default function PromotionCodes() {
     }
   }
 
-  function asDisplayValue(item, keys, fallback = "-") {
-    for (const key of keys) {
-      const value = item?.[key];
-      if (value === 0 || value === false) return value;
-      if (value) return value;
-    }
-    return fallback;
-  }
-
   function formatDate(value) {
     if (!value) return "-";
     const date =
@@ -151,6 +122,8 @@ export default function PromotionCodes() {
       year: "numeric",
       month: "short",
       day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     }).format(date);
   }
 
@@ -218,57 +191,35 @@ export default function PromotionCodes() {
             <div className="promo-alert promo-alert--error">{codesError}</div>
           ) : !codes.length ? (
             <div className="promo-empty muted">
-              No promotion codes yet. Click <strong>Create Code</strong> to add one.
+              No promotion codes yet. Click <strong>Create Code</strong> to add
+              one.
             </div>
           ) : (
             <div className="promo-table-wrapper">
               <table className="promo-table">
                 <thead>
                   <tr>
-                    <th>Name</th>
+                    <th>ID</th>
                     <th>Code</th>
-                    <th>Percentage</th>
+                    <th>Name</th>
+                    <th>Type</th>
+                    <th>Value (%)</th>
                     <th>Created</th>
                     <th>Status</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {codes.map((item) => {
-                    const key =
-                      item?.id ??
-                      item?.code ??
-                      item?.name ??
-                      item?.title ??
-                      Math.random().toString(36).slice(2);
-                    const name = asDisplayValue(item, ["name", "title", "label"]);
-                    const code = asDisplayValue(item, ["code", "slug"]);
-                    const percentage = asDisplayValue(item, ["value", "percentage", "amount"], "-");
-                    const created = formatDate(
-                      asDisplayValue(item, ["createdAt", "created_at", "created"])
-                    );
-                    const statusRaw = asDisplayValue(
-                      item,
-                      ["active", "enabled", "status"],
-                      "-"
-                    );
-                    const status =
-                      typeof statusRaw === "boolean"
-                        ? statusRaw
-                          ? "Active"
-                          : "Disabled"
-                        : statusRaw || "-";
-                    return (
-                      <tr key={key}>
-                        <td>{name}</td>
-                        <td>
-                          <code>{code}</code>
-                        </td>
-                        <td>{percentage !== "-" ? `${percentage}%` : "-"}</td>
-                        <td>{created}</td>
-                        <td>{status}</td>
-                      </tr>
-                    );
-                  })}
+                  {codes.map((item) => (
+                    <tr key={item.id || item.code}>
+                      <td>{item.id || "-"}</td>
+                      <td>{item.code || "-"}</td>
+                      <td>{item.name || "-"}</td>
+                      <td>{item.type || "-"}</td>
+                      <td>{item.value ? `${item.value}%` : "-"}</td>
+                      <td>{formatDate(item.created)}</td>
+                      <td>{item.status ? "Active" : "Disabled"}</td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
@@ -287,17 +238,6 @@ export default function PromotionCodes() {
             />
           </label>
 
-          <label className="promo-field">
-            <span>Code</span>
-            <input
-              type="text"
-              value={form.code}
-              onChange={(event) => updateField("code", event.target.value)}
-              placeholder="e.g. SUMMER25"
-              disabled={loading}
-            />
-          </label>
-
           <div className="promo-field promo-field--row">
             <label>
               <span>Percentage (%)</span>
@@ -309,6 +249,18 @@ export default function PromotionCodes() {
                 onChange={(event) => updateField("value", event.target.value)}
                 disabled={loading}
               />
+            </label>
+
+            <label>
+              <span>Type</span>
+              <select
+                value={form.type}
+                onChange={(event) => updateField("type", event.target.value)}
+                disabled={loading}
+              >
+                <option value="percentage">Percentage</option>
+                <option value="fixed">Fixed</option>
+              </select>
             </label>
           </div>
 
@@ -328,6 +280,9 @@ export default function PromotionCodes() {
           </button>
         </form>
       )}
+
+      {/* Uncomment below line to debug API response */}
+      {/* <pre style={{ background: "#fafafa", padding: "1em" }}>{JSON.stringify(codes, null, 2)}</pre> */}
     </div>
   );
 }
