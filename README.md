@@ -1,4 +1,18 @@
-Interface in Develmpron Mode for a DataBase created in firebase
+# 💾 dataBaseUi (Firebase Interface)
 
--Must be more generic 
--Must refactor a lot of code to because easy readable
+Interface in development mode for a **Firebase-based database**.  
+This project aims to create a simple web dashboard to manage, visualize, and edit data structures stored in Firebase.
+
+## 🚀 Tech Stack
+- **Frontend:** React + Vite  
+- **Backend:** Firebase Realtime Database  
+- **Language:** JavaScript (ES6)
+
+## 🧩 Features
+- Read/write operations to Firebase  
+- Dynamic rendering of database entries  
+- Simple modular UI  
+
+## ⚙️ Development Notes
+- Code refactoring in progress for better readability  
+- Aim: make the interface more generic and reusable
