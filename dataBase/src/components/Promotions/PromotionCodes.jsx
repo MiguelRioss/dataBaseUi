@@ -5,6 +5,8 @@ const DEFAULT_FORM = {
   name: "",
   type: "percentage",
   value: 10,
+  daysValid: 7, // default to one week
+  usageType: "single", // default option
 };
 
 const VIEW_MODES = {
@@ -95,6 +97,8 @@ export default function PromotionCodes() {
           name: form.name.trim(),
           type: form.type,
           value: form.value,
+          daysValid: form.daysValid,
+          usageType: form.usageType,
         },
       };
 
@@ -104,7 +108,8 @@ export default function PromotionCodes() {
         body: JSON.stringify(payload),
       });
 
-      if (!res.ok) throw new Error(`Failed to create promo code (${res.status})`);
+      if (!res.ok)
+        throw new Error(`Failed to create promo code (${res.status})`);
 
       setSuccess("Promotion code created successfully.");
       setForm(() => ({ ...DEFAULT_FORM }));
@@ -283,6 +288,7 @@ export default function PromotionCodes() {
                     <th>Type</th>
                     <th>Value (%)</th>
                     <th>Created</th>
+                    <th>Expired</th>
                     <th>Status</th>
                   </tr>
                 </thead>
@@ -301,9 +307,11 @@ export default function PromotionCodes() {
                         <td>{item.id || "-"}</td>
                         <td>{item.code || "-"}</td>
                         <td>{item.name || "-"}</td>
-                        <td>{item.type || "-"}</td>
+                        <td>{item.usageType || "-"}</td>
                         <td>{item.value ? `${item.value}%` : "-"}</td>
                         <td>{formatDate(item.created)}</td>
+                        <td>{formatDate(item.expiryDate)}</td>
+
                         <td>
                           <button
                             type="button"
@@ -350,16 +358,36 @@ export default function PromotionCodes() {
               />
             </label>
 
-            <label>
-              <span>Type</span>
-              <select
-                value={form.type}
-                onChange={(event) => updateField("type", event.target.value)}
-                disabled={loading}
-              >
-                <option value="percentage">Percentage</option>
-              </select>
-            </label>
+            <div className="promo-field promo-field--row">
+              <label>
+                <span>Valid for (days)</span>
+                <input
+                  type="number"
+                  min="1"
+                  max="31"
+                  step="1"
+                  value={form.daysValid}
+                  onChange={(event) =>
+                    updateField("daysValid", event.target.value)
+                  }
+                  disabled={loading}
+                />
+              </label>
+
+              <label>
+                <span>Usage Type</span>
+                <select
+                  value={form.usageType}
+                  onChange={(event) =>
+                    updateField("usageType", event.target.value)
+                  }
+                  disabled={loading}
+                >
+                  <option value="single">Single Use</option>
+                  <option value="multiple">Multiple Use</option>
+                </select>
+              </label>
+            </div>
           </div>
 
           {error ? (
