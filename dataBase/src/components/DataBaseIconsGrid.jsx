@@ -50,9 +50,9 @@ export default function DataBaseIconsGrid({ selected, onSelect }) {
       ),
     },
     {
-      key: "images",
-      title: "Images",
-      subtitle: "Upload and approve images (coming soon)",
+      key: "videos",
+      title: "Videos",
+      subtitle: "Approve the client Videos",
       icon: (
         <svg viewBox="0 0 24 24" fill="none" aria-hidden>
           <rect

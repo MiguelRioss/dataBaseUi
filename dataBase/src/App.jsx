@@ -8,13 +8,14 @@ import DataBaseIconsGrid from "./components/DataBaseIconsGrid";
 import "./App.css";
 import Inventory from "./components/Inventory/Inventory";
 import PromotionCodes from "./components/Promotions/PromotionCodes";
+import Videos from "./components/Videos/Videos";
 
 export default function App() {
   const [user, setUser] = React.useState(null);
   const [checking, setChecking] = React.useState(true);
   const [isAdmin, setIsAdmin] = React.useState(null);
 
-  // which admin view is open: 'orders' | 'images' | 'Inventory' | 'promotions'
+  // which admin view is open: 'orders' | 'videos' | 'Inventory' | 'promotions'
   const [selectedView, setSelectedView] = React.useState("orders");
 
   // Listen to auth user
@@ -75,13 +76,7 @@ export default function App() {
       <div>
         {selectedView === "orders" && <Orders />}
 
-        {selectedView === "images" && (
-          <div className="card">
-            <h3>Images — coming soon</h3>
-            <p className="muted">Here we'll add the image upload and approval UI. For now it's a placeholder.</p>
-            <button className="btn" disabled style={{opacity:0.6, marginTop:10}}>Upload images (not yet implemented)</button>
-          </div>
-        )}
+        {selectedView === "videos" && <Videos />}
         {selectedView === "Inventory" && <Inventory />}
         {selectedView === "promotions" && <PromotionCodes />}
       </div>
