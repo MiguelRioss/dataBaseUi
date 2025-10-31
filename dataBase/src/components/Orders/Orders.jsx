@@ -445,7 +445,7 @@ export default function Orders() {
 
   // ------- FOLDER SWITCH UI -------
   function FolderTabs() {
-    const base = "px-3 py-2 rounded-md text-sm font-medium";
+    const base = "btn padding-10";
     const on = "bg-white/10 text-white border border-white/20";
     const off =
       "bg-white/5 text-gray-200 hover:bg-white/10 border border-transparent";
