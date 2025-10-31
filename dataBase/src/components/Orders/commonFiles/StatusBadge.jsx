@@ -20,7 +20,7 @@ export default function StatusBadge({ status = {} }) {
 
   return (
     <span
-      className="badge badge--ok"
+      className="badge badge--ok "
       style={{
         backgroundColor: "#0c8438ff", // green
         color: "white",

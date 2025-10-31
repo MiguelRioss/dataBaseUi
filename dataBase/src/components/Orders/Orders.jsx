@@ -2,7 +2,8 @@
 import OrderRow from "./OrderRow";
 import SortableTh from "./commonFiles/toggleSort";
 import {
-  getAllOrders,
+  // Use ONE getter that accepts a folder, or replace with your own trio of getters.
+  getOrdersByFolder, // <-- implement in ../services/orderServices.mjs
   getOrderById,
   updateOrderStatus,
   updateTrackUrl,
@@ -17,11 +18,136 @@ import {
   sendInvoiceEmail,
 } from "../services/emailServices.mjs";
 import {
-  SHIPMENT_STATUS_KEYS,
-  SHIPMENT_STATUS_LABELS,
-} from "./commonFiles/Status/shipmentStatus";
+  buildNextStatusSteps,
+  buildDeliveredPatch,
+  filterRows,
+  sortRows,
+  toggleSort,
+} from "./commonFiles/orderUtils.js";
+import { moveOrdersTo } from "../services/orderMove.mjs";
+
+/* ──────────────────────────────────────────────────────────────────────────────
+   Table (unchanged)
+────────────────────────────────────────────────────────────────────────────── */
+function OrdersTable({
+  rows,
+  sort,
+  onToggleSort,
+  selectedIds,
+  onToggleRow,
+  allSelected,
+  onToggleAll,
+  rowProps,
+  className = "",
+}) {
+  return (
+    <div className={`overflow-x-auto mt-6 ${className}`}>
+      <table className="card w-full text-sm align-middle">
+        <thead>
+          <tr>
+            <th className="px-2 text-center">
+              <input
+                type="checkbox"
+                checked={allSelected && rows.length > 0}
+                onChange={onToggleAll}
+              />
+            </th>
+            <SortableTh
+              label="Order ID"
+              colKey="id"
+              sort={sort}
+              onToggle={onToggleSort}
+            />
+            <SortableTh
+              label="Payment ID"
+              colKey="payment"
+              sort={sort}
+              onToggle={onToggleSort}
+            />
+            <SortableTh
+              label="Date"
+              colKey="date"
+              sort={sort}
+              onToggle={onToggleSort}
+            />
+            <SortableTh
+              label="Customer"
+              colKey="customer"
+              sort={sort}
+              onToggle={onToggleSort}
+            />
+            <SortableTh
+              label="Email"
+              colKey="email"
+              sort={sort}
+              onToggle={onToggleSort}
+            />
+            <th>Products</th>
+            <th>Address</th>
+            <SortableTh
+              label="Price"
+              colKey="price"
+              sort={sort}
+              onToggle={onToggleSort}
+            />
+            <th>Track URL</th>
+            <SortableTh
+              label="Payment Status"
+              colKey="payment_status"
+              sort={sort}
+              onToggle={onToggleSort}
+            />
+            <th>Actions</th>
+            <SortableTh
+              label="Status"
+              colKey="status"
+              sort={sort}
+              onToggle={onToggleSort}
+            />
+            <SortableTh
+              label="Completed?"
+              colKey="completed"
+              sort={sort}
+              onToggle={onToggleSort}
+              className="text-center"
+            />
+          </tr>
+        </thead>
+
+        <tbody>
+          {rows.map((r) => (
+            <tr key={r.id} className="align-middle">
+              <td className="px-2 text-center">
+                <input
+                  type="checkbox"
+                  checked={selectedIds.has(r.id)}
+                  onChange={() => onToggleRow(r.id)}
+                />
+              </td>
+              <OrderRow
+                row={r}
+                {...(typeof rowProps === "function" ? rowProps(r) : {})}
+              />
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+/* ──────────────────────────────────────────────────────────────────────────────
+   Main page with folder switching (ongoing / archived / deleted)
+────────────────────────────────────────────────────────────────────────────── */
+const FOLDERS = {
+  ONGOING: "ongoing",
+  ARCHIVED: "archive",
+  DELETED: "deleted",
+};
 
 export default function Orders() {
+  const [folder, setFolder] = React.useState(FOLDERS.ONGOING);
+
   const [rows, setRows] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState("");
@@ -35,43 +161,40 @@ export default function Orders() {
   const [sort, setSort] = React.useState({ key: "date", dir: "desc" });
   const [searchTerm, setSearchTerm] = React.useState("");
   const manualOrderRef = React.useRef(null);
+  const [selectedIds, setSelectedIds] = React.useState(new Set());
 
-  // ------- LOAD ORDERS -------
+  // bulk action state
+  const [bulkMoving, setBulkMoving] = React.useState(null); // "archive" | "deleted" | "ongoing" | null
+
+  // ------- LOAD ORDERS FOR CURRENT FOLDER -------
   const load = React.useCallback(async () => {
     try {
       setError("");
       setLoading(true);
-      const list = await getAllOrders();
-      setRows(list);
+      const list = await getOrdersByFolder(folder); // implement to return array for the chosen folder
+      setRows(list || []);
+      setSelectedIds(new Set());
     } catch (e) {
       setError(e.message || String(e));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [folder]);
 
   React.useEffect(() => {
     load();
   }, [load]);
 
+  // ------- UPDATE STATUS -------
   async function handleUpdateStatus(orderId, patch) {
     try {
       const updatedStatus = await updateOrderStatus(orderId, patch);
-      const nextStatusSteps = SHIPMENT_STATUS_KEYS.map((key) => ({
-        key,
-        label: SHIPMENT_STATUS_LABELS[key],
-        ...updatedStatus[key],
-      }));
-
+      const nextStatusSteps = buildNextStatusSteps(updatedStatus);
       setRows((prev) =>
         prev.map((r) =>
           r.id !== orderId
             ? r
-            : {
-                ...r,
-                status: updatedStatus,
-                status_steps: nextStatusSteps,
-              }
+            : { ...r, status: updatedStatus, status_steps: nextStatusSteps }
         )
       );
     } catch (e) {
@@ -79,16 +202,13 @@ export default function Orders() {
     }
   }
 
+  // ------- TOGGLE DELIVERED -------
   async function handleToggleDelivered(orderId, nextVal) {
-    // When delivered, mark all steps true; otherwise false
-    const patch = SHIPMENT_STATUS_KEYS.reduce((acc, key) => {
-      acc[key] = nextVal;
-      return acc;
-    }, {});
-
+    const patch = buildDeliveredPatch(nextVal);
     return handleUpdateStatus(orderId, patch);
   }
 
+  // ------- TOGGLE PAYMENT -------
   const handleTogglePaymentStatus = React.useCallback(
     async (orderId, nextStatus) => {
       if (!orderId) return;
@@ -107,84 +227,80 @@ export default function Orders() {
         setUpdatingPaymentStatusId(null);
       }
     },
-    [setRows, setError, updatePaymentStatus]
+    []
   );
 
-  const handleSendEmail = React.useCallback(async (row) => {
-    if (!row) return;
-    const trackingCode = String(row.track_url ?? "").trim();
-    const normalizedTracking = trackingCode.toUpperCase();
-    const hasTracking =
-      normalizedTracking.length > 0 && normalizedTracking.includes("RT");
+  // ------- SEND SHIPPING EMAIL -------
+  const handleSendEmail = React.useCallback(
+    async (row) => {
+      if (!row) return;
+      const trackingCode = String(row.track_url ?? "").trim();
+      const normalizedTracking = trackingCode.toUpperCase();
+      const hasTracking =
+        normalizedTracking.length > 0 && normalizedTracking.includes("RT");
 
-    if (!hasTracking) {
-      setError("Add the RT tracking code before sending the shipping email.");
-      return;
-    }
+      if (!hasTracking) {
+        setError("Add the RT tracking code before sending the shipping email.");
+        return;
+      }
+      if (!row.email) {
+        setError("Customer email is missing for this order.");
+        return;
+      }
+      if (sendingEmailId) return;
 
-    if (!row.email) {
-      setError("Customer email is missing for this order.");
-      return;
-    }
+      try {
+        setError("");
+        setSendingEmailId(row.id);
 
-    if (sendingEmailId) return;
+        const order = await getOrderById(row.id);
+        if (!order) throw new Error("Order details not found.");
 
-    try {
-      setError("");
-      setSendingEmailId(row.id);
+        const orderDate =
+          order?.written_at ??
+          (typeof row?.date?.toISOString === "function"
+            ? row.date.toISOString()
+            : undefined);
 
-      const order = await getOrderById(row.id);
-      if (!order) throw new Error("Order details not found.");
+        const invoiceId =
+          order?.invoice_id ??
+          order?.metadata?.invoice_id ??
+          order?.metadata?.invoiceId;
+        const locale =
+          order?.metadata?.locale ??
+          order?.metadata?.lang ??
+          order?.metadata?.language;
 
-      const orderDate =
-        order?.written_at ??
-        (typeof row?.date?.toISOString === "function"
-          ? row.date.toISOString()
-          : undefined);
+        await sendShippingEmail({
+          order,
+          orderId: row.id,
+          orderDate,
+          invoiceId,
+          trackingNumber: trackingCode,
+          trackingUrl: buildCttUrl(trackingCode),
+          locale,
+          live: true,
+        });
 
-      const invoiceId =
-        order?.invoice_id ??
-        order?.metadata?.invoice_id ??
-        order?.metadata?.invoiceId;
+        await updateShippingEmailStatus(row.id, true);
 
-      const locale =
-        order?.metadata?.locale ??
-        order?.metadata?.lang ??
-        order?.metadata?.language;
+        setRows((prev) =>
+          prev.map((existing) =>
+            existing.id === row.id
+              ? { ...existing, sentShippingEmail: true }
+              : existing
+          )
+        );
+      } catch (err) {
+        setError(err?.message || "Failed to send shipping email.");
+      } finally {
+        setSendingEmailId(null);
+      }
+    },
+    [sendingEmailId]
+  );
 
-      // ✅ 1️⃣ Send the actual email
-      await sendShippingEmail({
-        order,
-        orderId: row.id,
-        orderDate,
-        invoiceId,
-        trackingNumber: trackingCode,
-        trackingUrl: buildCttUrl(trackingCode),
-        locale,
-        live: true,
-      });
-
-      // ✅ 2️⃣ Persist flag to DB
-      await updateShippingEmailStatus(row.id, true);
-      console.log(
-        `[Orders.jsx] DB updated: sentShippingEmail=true for ${row.id}`
-      );
-
-      // ✅ 3️⃣ Update local UI immediately
-      setRows((prev) =>
-        prev.map((existing) =>
-          existing.id === row.id
-            ? { ...existing, sentShippingEmail: true }
-            : existing
-        )
-      );
-    } catch (err) {
-      setError(err?.message || "Failed to send shipping email.");
-    } finally {
-      setSendingEmailId(null);
-    }
-  });
-
+  // ------- SEND INVOICE -------
   const handleSendInvoice = React.useCallback(
     async (row) => {
       if (!row) return;
@@ -214,30 +330,24 @@ export default function Orders() {
         setSendingInvoiceId(null);
       }
     },
-    [sendingInvoiceId, getOrderById, sendInvoiceEmail, setError]
+    [sendingInvoiceId]
   );
 
-  const handleOpenOrderEdit = React.useCallback(
-    (orderId) => {
-      try {
-        setError("");
-        const result = manualOrderRef.current?.openEdit(orderId);
-        if (result?.catch) {
-          result.catch((err) => {
-            setError(err?.message || String(err));
-          });
-        }
-      } catch (err) {
-        setError(err?.message || String(err));
-      }
-    },
-    [manualOrderRef, setError]
-  );
+  // ------- OPEN MANUAL ORDER EDIT -------
+  const handleOpenOrderEdit = React.useCallback((orderId) => {
+    try {
+      setError("");
+      const result = manualOrderRef.current?.openEdit(orderId);
+      if (result?.catch)
+        result.catch((err) => setError(err?.message || String(err)));
+    } catch (err) {
+      setError(err?.message || String(err));
+    }
+  }, []);
 
   // ------- SAVE TRACK URL -------
   async function handleSaveTrackUrl(id, trackUrl) {
     try {
-      console.log(trackUrl);
       setSavingId(id);
       await updateTrackUrl(id, trackUrl);
       setRows((prev) =>
@@ -255,24 +365,16 @@ export default function Orders() {
   const logThenPatchOrders = React.useCallback(async () => {
     setScanLoading(true);
     try {
-      console.log("[Orders.jsx] 🔄 Triggering Pi patch job...");
-      const results = await patchAllOrderFlags();
-      console.log(
-        "[Orders.jsx] ✅ Pi job done:",
-        results.length,
-        "orders patched"
-      );
-      console.log("[Orders.jsx] 🔁 Reloading updated orders from DB...");
+      await patchAllOrderFlags();
       await load();
-      console.log("[Orders.jsx] ✅ Orders reloaded");
     } catch (e) {
-      console.error("[Orders.jsx] ❌ Patch failed:", e);
       setError(e.message);
     } finally {
       setScanLoading(false);
     }
   }, [load]);
 
+  // ------- MANUAL ORDER CREATE -------
   const handleManualOrderCreate = React.useCallback((rawOrder) => {
     if (!rawOrder || !rawOrder.id) return;
     const [mapped] = mapDbToRows({ [rawOrder.id]: rawOrder });
@@ -283,92 +385,156 @@ export default function Orders() {
     });
   }, []);
 
-  // ------- SORTING -------
-  const SORT_KEYS = {
-    id: (r) => r.id,
-    date: (r) => (r.date instanceof Date ? r.date.getTime() : 0),
-    customer: (r) => (r.name || "").toLowerCase(),
-    email: (r) => (r.email || "").toLowerCase(),
-    payment: (r) => String(r.payment_id || "").toLowerCase(),
-    payment_status: (r) => (r.payment_status ? 1 : 0),
-    price: (r) => (Number.isFinite(r.amount) ? r.amount : 0),
-    status: (r) => {
-      const deliveredRank = r?.status?.delivered?.status ? 0 : 1;
-      const label = (r?.status?.label || r?.status?.state || "").toLowerCase();
-      return `${deliveredRank}::${label}`;
-    },
-    completed: (r) => (r?.status?.delivered?.status ? 1 : 0),
-  };
+  // ------- FILTER + SORT -------
+  const filteredRows = React.useMemo(
+    () => filterRows(rows, searchTerm),
+    [rows, searchTerm]
+  );
+  const sortedRows = React.useMemo(
+    () => sortRows(filteredRows, sort),
+    [filteredRows, sort]
+  );
+  const handleSortToggle = (key) => setSort((prev) => toggleSort(prev, key));
 
-  const toggleSort = (key) => {
-    setSort((prev) => {
-      if (prev.key === key)
-        return { key, dir: prev.dir === "asc" ? "desc" : "asc" };
-      const defaultDir = [
-        "date",
-        "price",
-        "completed",
-        "payment_status",
-      ].includes(key)
-        ? "desc"
-        : "asc";
-      return { key, dir: defaultDir };
+  const allSelected =
+    selectedIds.size > 0 && selectedIds.size === sortedRows.length;
+
+  function handleToggleRow(id) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
     });
-  };
+  }
 
-  const filteredRows = React.useMemo(() => {
-    const query = searchTerm.trim().toLowerCase();
-    if (!query) return rows;
-    return rows.filter((row) => {
-      const idMatch = String(row.id ?? "")
-        .toLowerCase()
-        .includes(query);
-      const paymentMatch = String(row.payment_id ?? "")
-        .toLowerCase()
-        .includes(query);
-      const nameMatch = String(row.name ?? "")
-        .toLowerCase()
-        .includes(query);
-      const emailMatch = String(row.email ?? "")
-        .toLowerCase()
-        .includes(query);
-      const paymentStatusLabel = row.payment_status ? "paid" : "unpaid";
-      const paymentStatusMatch =
-        paymentStatusLabel.includes(query) ||
-        String(row.payment_status ?? "")
-          .toLowerCase()
-          .includes(query);
-      return (
-        idMatch || paymentMatch || nameMatch || emailMatch || paymentStatusMatch
-      );
-    });
-  }, [rows, searchTerm]);
+  function handleToggleAll() {
+    const allIds = sortedRows.map((r) => r.id);
+    if (selectedIds.size === allIds.length) setSelectedIds(new Set());
+    else setSelectedIds(new Set(allIds));
+  }
 
-  const sortedRows = React.useMemo(() => {
-    const targetRows = filteredRows;
-    const getter = SORT_KEYS[sort.key];
-    if (!getter) return targetRows;
-    const mul = sort.dir === "asc" ? 1 : -1;
-    return [...targetRows].sort((a, b) => {
-      const va = getter(a);
-      const vb = getter(b);
-      if (va == null && vb == null) return 0;
-      if (va == null) return 1;
-      if (vb == null) return -1;
-      if (va < vb) return -1 * mul;
-      if (va > vb) return 1 * mul;
-      return 0;
-    });
-  }, [filteredRows, sort]);
+  // ------- BULK MOVE (contextual to current folder) -------
+  async function handleBulkMove(dest /* "archive" | "deleted" | "ongoing" */) {
+    const ids = [...selectedIds];
+    if (!ids.length) return;
 
-  const hasSearch = searchTerm.trim().length > 0;
+    const pretty =
+      {
+        [FOLDERS.ARCHIVED]: "Archive",
+        [FOLDERS.DELETED]: "Deleted",
+        [FOLDERS.ONGOING]: "Ongoing",
+      }[dest] || dest;
 
-  // ------- UI -------
+    if (!window.confirm(`Move ${ids.length} order(s) to ${pretty}?`)) return;
+
+    try {
+      setBulkMoving(dest);
+      // ⬇️ pass the current folder as source so the backend can move from the right node
+      await moveOrdersTo(ids, dest, folder);
+
+      // Optimistic UI: remove from current view
+      setRows((prev) => prev.filter((r) => !selectedIds.has(r.id)));
+      setSelectedIds(new Set());
+    } catch (e) {
+      setError(e.message || String(e));
+    } finally {
+      setBulkMoving(null);
+    }
+  }
+
+  // ------- FOLDER SWITCH UI -------
+  function FolderTabs() {
+    const base = "px-3 py-2 rounded-md text-sm font-medium";
+    const on = "bg-white/10 text-white border border-white/20";
+    const off =
+      "bg-white/5 text-gray-200 hover:bg-white/10 border border-transparent";
+    return (
+      <div className="flex gap-2">
+        <button
+          className={`${base} ${folder === FOLDERS.ONGOING ? on : off}`}
+          onClick={() => setFolder(FOLDERS.ONGOING)}
+        >
+          Ongoing
+        </button>
+        <button
+          className={`${base} ${folder === FOLDERS.ARCHIVED ? on : off}`}
+          onClick={() => setFolder(FOLDERS.ARCHIVED)}
+        >
+          Archived
+        </button>
+        <button
+          className={`${base} ${folder === FOLDERS.DELETED ? on : off}`}
+          onClick={() => setFolder(FOLDERS.DELETED)}
+        >
+          Deleted
+        </button>
+      </div>
+    );
+  }
+
+  // Contextual bulk actions
+  function BulkBar() {
+    if (selectedIds.size === 0) return null;
+
+    return (
+      <div className="mt-4 flex flex-wrap items-center gap-3 rounded-lg border border-amber-300/40 bg-amber-50/40 p-3">
+        <span className="text-sm">{selectedIds.size} selected</span>
+
+        {folder !== FOLDERS.ARCHIVED && (
+          <button
+            className="btn btn--ghost"
+            disabled={!!bulkMoving}
+            onClick={() => handleBulkMove(FOLDERS.ARCHIVED)}
+            title="Move selected to Archive"
+          >
+            {bulkMoving === FOLDERS.ARCHIVED ? "Archiving…" : "Move to Archive"}
+          </button>
+        )}
+
+        {folder !== FOLDERS.DELETED && (
+          <button
+            className="btn btn--ghost"
+            disabled={!!bulkMoving}
+            onClick={() => handleBulkMove(FOLDERS.DELETED)}
+            title="Move selected to Deleted"
+          >
+            {bulkMoving === FOLDERS.DELETED ? "Deleting…" : "Move to Deleted"}
+          </button>
+        )}
+
+        {folder !== FOLDERS.ONGOING && (
+          <button
+            className="btn btn--ghost"
+            disabled={!!bulkMoving}
+            onClick={() => handleBulkMove(FOLDERS.ONGOING)}
+            title="Restore to Ongoing"
+          >
+            {bulkMoving === FOLDERS.ONGOING
+              ? "Restoring…"
+              : "Restore to Ongoing"}
+          </button>
+        )}
+
+        <button
+          className="btn"
+          onClick={() => setSelectedIds(new Set())}
+          disabled={!!bulkMoving}
+        >
+          Clear Selection
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="page py-4">
       <div className="max-w-7xl mx-auto px-6">
         <div className="orders-header flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <h1 className="orders-title text-xl font-semibold">Orders</h1>
+          <div className="flex items-center gap-4">
+            <h1 className="orders-title text-xl font-semibold">Orders</h1>
+            <FolderTabs />
+          </div>
 
           <div className="orders-actions flex flex-wrap gap-6 sm:gap-8 items-center">
             <button
@@ -378,18 +544,22 @@ export default function Orders() {
             >
               {scanLoading ? "Updating..." : "Log Orders & Patch Flags"}
             </button>
-            <NewOrderPopup
-              ref={manualOrderRef}
-              onCreate={handleManualOrderCreate}
-            />
+            {folder === FOLDERS.ONGOING && (
+              <NewOrderPopup
+                ref={manualOrderRef}
+                onCreate={handleManualOrderCreate}
+              />
+            )}
           </div>
         </div>
 
-        {error ? (
+        <BulkBar />
+
+        {error && (
           <div className="new-order-hint new-order-hint--error mt-4">
             {error}
           </div>
-        ) : null}
+        )}
 
         <div className="mt-4 w-full">
           <label
@@ -408,117 +578,44 @@ export default function Orders() {
           />
         </div>
 
-        {/* State feedback below the header */}
         {loading ? (
           <div className="page text-center mt-6">Loading orders...</div>
         ) : !rows.length ? (
           <div className="page text-center mt-6 text-gray-400">
-            No orders yet.
+            No orders in this folder.
           </div>
         ) : !filteredRows.length ? (
           <div className="page text-center mt-6 text-gray-400">
             No orders match your search.
           </div>
         ) : (
-          <div className="overflow-x-auto mt-6">
-            <table className="card w-full text-sm">
-              <thead>
-                <tr>
-                  <SortableTh
-                    label="Order ID"
-                    colKey="id"
-                    sort={sort}
-                    onToggle={toggleSort}
-                  />
-                  <SortableTh
-                    label="Payment ID"
-                    colKey="payment"
-                    sort={sort}
-                    onToggle={toggleSort}
-                  />
-                  <SortableTh
-                    label="Date"
-                    colKey="date"
-                    sort={sort}
-                    onToggle={toggleSort}
-                  />
-                  <SortableTh
-                    label="Customer"
-                    colKey="customer"
-                    sort={sort}
-                    onToggle={toggleSort}
-                  />
-                  <SortableTh
-                    label="Email"
-                    colKey="email"
-                    sort={sort}
-                    onToggle={toggleSort}
-                  />
-                  <th>Products</th>
-                  <th>Address</th>
-                  <SortableTh
-                    label="Price"
-                    colKey="price"
-                    sort={sort}
-                    onToggle={toggleSort}
-                  />
-                  <th>Track URL</th>
-                  <SortableTh
-                    label="Payment Status"
-                    colKey="payment_status"
-                    sort={sort}
-                    onToggle={toggleSort}
-                  />
-                  <th>Actions</th>
-                  <SortableTh
-                    label="Status"
-                    colKey="status"
-                    sort={sort}
-                    onToggle={toggleSort}
-                  />
-                  <SortableTh
-                    label="Last Status"
-                    colKey="status"
-                    sort={sort}
-                    onToggle={toggleSort}
-                  />
-                  <SortableTh
-                    label="Completed?"
-                    colKey="completed"
-                    sort={sort}
-                    onToggle={toggleSort}
-                  />
-                </tr>
-              </thead>
-              <tbody>
-                {sortedRows.map((r) => {
-                  console.log("[Orders.jsx] Row data before rendering:", r); // 🧾 DEBUG
-                  return (
-                    <OrderRow
-                      key={r.id}
-                      row={r}
-                      isEditing={editingId === r.id}
-                      onEdit={() => setEditingId(r.id)}
-                      onCancelEdit={() => setEditingId(null)}
-                      onSaveTrackUrl={handleSaveTrackUrl}
-                      saving={savingId === r.id}
-                      sendingEmail={sendingEmailId === r.id} // ✅ boolean, not sendingEmailId
-                      sendingInvoice={sendingInvoiceId === r.id} // ✅ ADD THIS
-                      onUpdateStatus={handleUpdateStatus}
-                      onToggleDelivered={handleToggleDelivered}
-                      onSendEmail={handleSendEmail}
-                      onOpenOrderEdit={handleOpenOrderEdit}
-                      onTogglePaymentStatus={handleTogglePaymentStatus}
-                      togglingPaymentStatus={updatingPaymentStatusId === r.id}
-                      onSendInvoice={handleSendInvoice}
-                      paymentStatus={r.payment_status} // ✅ matches DB key
-                      emailSentThankYouAdmin={r.emailThankYouAdmin} // ✅ matches DB key
-                    />
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          <OrdersTable
+            rows={sortedRows}
+            sort={sort}
+            onToggleSort={handleSortToggle}
+            selectedIds={selectedIds}
+            onToggleRow={handleToggleRow}
+            allSelected={allSelected}
+            onToggleAll={handleToggleAll}
+            rowProps={(r) => ({
+              isEditing: editingId === r.id,
+              onEdit: () => setEditingId(r.id),
+              onCancelEdit: () => setEditingId(null),
+              onSaveTrackUrl: handleSaveTrackUrl,
+              saving: savingId === r.id,
+              sendingEmail: sendingEmailId === r.id,
+              sendingInvoice: sendingInvoiceId === r.id,
+              onUpdateStatus: handleUpdateStatus,
+              onToggleDelivered: handleToggleDelivered,
+              onSendEmail: handleSendEmail,
+              onOpenOrderEdit: handleOpenOrderEdit,
+              onTogglePaymentStatus: handleTogglePaymentStatus,
+              togglingPaymentStatus: updatingPaymentStatusId === r.id,
+              onSendInvoice: handleSendInvoice,
+              paymentStatus: r.payment_status,
+              emailSentThankYouAdmin: r.emailThankYouAdmin,
+            })}
+          />
         )}
       </div>
     </div>

@@ -145,3 +145,135 @@ export async function createOrderServices(order) {
   const response = await createOrder(order);
   return response?.order ?? response;
 }
+
+
+/* ──────────────────────────────────────────────────────────────────────────────
+   Folder-aware getters
+   - Relies on fetchOrders({ folder, limit })
+   - Normalizes payload -> list -> mapDbToRows -> date-desc sort
+────────────────────────────────────────────────────────────────────────────── */
+
+const FOLDERS = {
+  ONGOING: "ongoing",
+  ARCHIVE: "archive",
+  DELETED: "deleted",
+};
+
+/**
+ * Internal: normalize API payload to a flat array of order objects.
+ */
+function normalizePayloadToList(payload) {
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.items)) return payload.items;
+  if (payload?.items && typeof payload.items === "object") {
+    return Object.values(payload.items);
+  }
+  return [];
+}
+
+/**
+ * Internal: maps a raw list to UI rows and sorts by date desc.
+ */
+function mapAndSort(list) {
+  const byId = Object.fromEntries(
+    list
+      .filter((order) => order && (order.id || order.uid || order.orderId || order.order_id))
+      .map((order) => [
+        order.id ?? order.uid ?? order.orderId ?? order.order_id,
+        { ...order, id: order.id ?? order.uid ?? order.orderId ?? order.order_id },
+      ])
+  );
+
+  const rows = mapDbToRows(Object.values(byId));
+  return rows.sort((a, b) => (b.date?.getTime?.() ?? 0) - (a.date?.getTime?.() ?? 0));
+}
+
+/**
+ * Get orders by folder.
+ * @param {"ongoing" | "archive" | "deleted"} folder
+ * @param {number} limit
+ * @returns {Promise<Array>} mapped & sorted rows
+ */
+export async function getOrdersByFolder(folder, limit = 100) {
+  // Guard unknown folders early (helps avoid silent empty UI states).
+  const allowed = new Set(Object.values(FOLDERS));
+  if (!allowed.has(folder)) {
+    throw new Error(
+      `Invalid folder "${folder}". Allowed: ${[...allowed].join(", ")}`
+    );
+  }
+
+  // If your backend expects no "folder" param for ongoing,
+  // you can special-case it here. Otherwise pass it through.
+  const query = folder === FOLDERS.ONGOING ? { limit } : { folder, limit };
+
+  const payload = await fetchOrders(query);
+  const list = normalizePayloadToList(payload);
+  return mapAndSort(list);
+}
+
+/**
+ * Convenience wrappers (keep API readable in UI screens).
+ */
+export async function getArchivedOrders(limit = 100) {
+  return getOrdersByFolder(FOLDERS.ARCHIVE, limit);
+}
+
+export async function getDeletedOrders(limit = 100) {
+  return getOrdersByFolder(FOLDERS.DELETED, limit);
+}
+
+
+/* ──────────────────────────────────────────────────────────────────────────────
+   Move orders between folders (client → API)
+   - source/dest: "orders" | "archive" | "deleted" (accepts "archived" → "archive")
+   - ids: array of order IDs
+────────────────────────────────────────────────────────────────────────────── */
+
+function normalizeFolderName(v) {
+  const x = String(v ?? "").trim().toLowerCase();
+  if (x === "archived") return "archive";
+  if (x === "ongoing")  return "orders";
+  if (x === "orders" || x === "archive" || x === "deleted") return x;
+  throw new Error(`Invalid folder "${v}". Allowed: orders | archive | deleted`);
+}
+
+/**
+ * Bulk move orders. Example: moveOrdersTo(["A","B"], "archive", "orders")
+ * If source is omitted, the server can infer from current view, but passing it is safer.
+ */
+export async function moveOrdersTo(ids, dest, source) {
+  if (!Array.isArray(ids) || ids.length === 0) {
+    throw new Error("moveOrdersTo: 'ids' must be a non-empty array");
+  }
+  const body = {
+    ids,
+    dest:   normalizeFolderName(dest),
+    source: source ? normalizeFolderName(source) : undefined,
+  };
+
+  const res = await fetch("/api/orders/move", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    let msg = `Failed to move orders (${res.status})`;
+    try {
+      const err = await res.json();
+      if (err?.error) msg = err.error;
+    } catch (_) {}
+    throw new Error(msg);
+  }
+
+  return res.json(); // -> { moved, skipped, source, dest }
+}
+
+/**
+ * Convenience single-order wrapper.
+ */
+export async function moveOrderTo(id, dest, source) {
+  if (!id) throw new Error("moveOrderTo: 'id' is required");
+  return moveOrdersTo([id], dest, source);
+}

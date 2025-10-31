@@ -4,7 +4,6 @@ import StatusPopUp from "./commonFiles/Status/StatusPopUp";
 import { centsToEUR, buildCttUrl } from "./commonFiles/PopUp/utils/utils";
 import ProductsPopup from "./commonFiles/PopUp/ProductsPopup";
 import StatusBadge from "./commonFiles/StatusBadge";
-
 export default function OrderRow({
   row,
   isEditing,
@@ -12,7 +11,7 @@ export default function OrderRow({
   onCancelEdit,
   onSaveTrackUrl,
   saving,
-  sendingEmail, // ✅ now boolean from parent (sendingEmailId === row.id)
+  sendingEmail,
   onUpdateStatus,
   onToggleDelivered,
   onOpenOrderEdit,
@@ -20,24 +19,24 @@ export default function OrderRow({
   onTogglePaymentStatus,
   togglingPaymentStatus,
   onSendInvoice,
-  paymentStatus, // ✅ DB: payment_status
-  emailSentThankYouAdmin, // ✅ DB: email_Sent_ThankYou_Admin
+  paymentStatus,
+  emailSentThankYouAdmin,
   sendingInvoice,
 }) {
   const deliveredOk = !!row?.status?.delivered?.status;
   const trackingCode = String(row?.track_url ?? "").trim();
   const normalizedTrackingCode = trackingCode.toUpperCase();
   const hasTrackingCode =
-    normalizedTrackingCode.length > 0 && (normalizedTrackingCode.includes("RT") || normalizedTrackingCode.includes("RU"));
+    normalizedTrackingCode.length > 0 &&
+    (normalizedTrackingCode.includes("RT") ||
+      normalizedTrackingCode.includes("RU"));
 
-  // --- Tracking Email ---
   const emailAlreadySent = row.sentShippingEmail || row.email_sent;
   const emailButtonDisabled = sendingEmail || !hasTrackingCode;
   let emailButtonLabel = "Send Tracking Email";
   if (sendingEmail) emailButtonLabel = "Sending...";
   else if (emailAlreadySent) emailButtonLabel = "Re-send Tracking Email";
 
-  // --- Payment Status ---
   const canTogglePayment = typeof onTogglePaymentStatus === "function";
   const isPaid = !!paymentStatus;
   const paymentButtonLabel = togglingPaymentStatus
@@ -45,32 +44,20 @@ export default function OrderRow({
     : isPaid
     ? "Paid"
     : "Unpaid";
-  const paymentButtonTitle = togglingPaymentStatus
-    ? "Updating payment status..."
-    : "Toggle payment status";
   const paymentButtonClass = `badge order-row__payment ${
     isPaid ? "badge--ok" : "badge--no"
   }`;
 
-  // --- Invoice / Admin Email Button ---
-  console.log("Email sent ? ", emailSentThankYouAdmin);
   const invoiceAlreadySent = !!emailSentThankYouAdmin;
   const invoiceButtonDisabled = !isPaid || sendingInvoice || sendingEmail;
-
-  let invoiceButtonLabel;
-  if (sendingInvoice) invoiceButtonLabel = "Sending...";
-  else if (invoiceAlreadySent)
-    invoiceButtonLabel = "Re-send Thank You + Admin Email";
-  else invoiceButtonLabel = "Send Thank You + Admin Email";
-
-  const invoiceButtonTitle = !isPaid
-    ? "Payment must be marked as paid before sending shipping/admin emails."
+  const invoiceButtonLabel = sendingInvoice
+    ? "Sending..."
     : invoiceAlreadySent
-    ? "This email was already sent. Click to re-send."
-    : "Send shipping confirmation to customer and admin.";
+    ? "Re-send Thank You + Admin Email"
+    : "Send Thank You + Admin Email";
 
   return (
-    <tr key={row.id}>
+    <>
       <td data-mono>{row.id}</td>
       <td>{row.payment_id || <span className="muted">-</span>}</td>
       <td style={{ whiteSpace: "nowrap" }}>
@@ -78,7 +65,6 @@ export default function OrderRow({
       </td>
       <td>{row.name}</td>
       <td className="muted">{row.email}</td>
-
       <td>
         <ProductsPopup
           shippingCost={row.shippingCost}
@@ -88,26 +74,14 @@ export default function OrderRow({
           title="Order products"
         />
       </td>
-
       <td>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            flexWrap: "wrap",
-          }}
-        >
-          <AddressPopup
-            shipping={row.shipping_address}
-            billing={row.billing_address}
-          />
-        </div>
+        <AddressPopup
+          shipping={row.shipping_address}
+          billing={row.billing_address}
+        />
       </td>
-
       <td>{centsToEUR(row.amount)}</td>
 
-      {/* Track URL (editable) */}
       <td className="wrap">
         {isEditing ? (
           <TrackEditor
@@ -125,16 +99,8 @@ export default function OrderRow({
         )}
       </td>
 
-      {/* Payment + Email buttons */}
       <td>
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: 8,
-            alignItems: "stretch",
-          }}
-        >
+        <div className="flex flex-col gap-2 items-stretch">
           {canTogglePayment ? (
             <button
               type="button"
@@ -143,38 +109,26 @@ export default function OrderRow({
                 onTogglePaymentStatus?.(row.id, !isPaid)
               }
               className={paymentButtonClass}
-              style={{ cursor: togglingPaymentStatus ? "wait" : "pointer" }}
               disabled={togglingPaymentStatus}
-              title={paymentButtonTitle}
             >
               {paymentButtonLabel}
             </button>
           ) : (
             <span className={paymentButtonClass}>{paymentButtonLabel}</span>
           )}
-
           <button
-            className="btn btn--ghost "
+            className="btn btn--ghost"
             type="button"
             onClick={() => onSendInvoice?.(row)}
             disabled={invoiceButtonDisabled}
-            title={invoiceButtonTitle}
           >
             {invoiceButtonLabel}
           </button>
         </div>
       </td>
 
-      {/* Action Buttons */}
       <td>
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: 8,
-            alignItems: "stretch",
-          }}
-        >
+        <div className="flex flex-col gap-2 items-stretch">
           {!isEditing && (
             <button className="btn" onClick={() => onEdit?.(row.id)}>
               Edit Tracking
@@ -182,14 +136,12 @@ export default function OrderRow({
           )}
           <button
             className="btn btn--ghost"
-            type="button"
             onClick={() => onOpenOrderEdit?.(row.id)}
           >
             Edit Order
           </button>
           <button
             className="btn"
-            type="button"
             onClick={() => onSendEmail?.(row)}
             disabled={emailButtonDisabled}
           >
@@ -198,27 +150,23 @@ export default function OrderRow({
         </div>
       </td>
 
-      {/* STATUS POPUP */}
       <td>
         <StatusPopUp
           status={row.status}
-          onSave={(flatPatch) => onUpdateStatus?.(row.id, flatPatch)}
+          onSave={(patch) => onUpdateStatus?.(row.id, patch)}
         />
-      </td>
-      <td>
         <StatusBadge status={row.status} />
       </td>
-      <td>
+      <td className="text-center">
         <button
           type="button"
           onClick={() => onToggleDelivered?.(row.id, !deliveredOk)}
           className={`badge ${deliveredOk ? "badge--ok" : "badge--no"}`}
-          style={{ cursor: "pointer" }}
           title="Toggle Delivered"
         >
           {deliveredOk ? "Yes" : "No"}
         </button>
       </td>
-    </tr>
+    </>
   );
 }
