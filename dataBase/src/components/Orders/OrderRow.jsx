@@ -28,7 +28,7 @@ export default function OrderRow({
   const trackingCode = String(row?.track_url ?? "").trim();
   const normalizedTrackingCode = trackingCode.toUpperCase();
   const hasTrackingCode =
-    normalizedTrackingCode.length > 0 && normalizedTrackingCode.includes("RT");
+    normalizedTrackingCode.length > 0 && (normalizedTrackingCode.includes("RT") || normalizedTrackingCode.includes("RU"));
 
   // --- Tracking Email ---
   const emailAlreadySent = row.sentShippingEmail || row.email_sent;

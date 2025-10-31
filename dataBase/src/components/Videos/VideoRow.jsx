@@ -1,5 +1,7 @@
 // components/VideoRow.jsx
 import React from "react";
+import { acceptVideoService } from "../services/videoServices";
+
 
 export default function VideoRow({ video, onDelete, deleting }) {
   const [showPreview, setShowPreview] = React.useState(false);
@@ -20,6 +22,26 @@ export default function VideoRow({ video, onDelete, deleting }) {
     }
   };
 
+
+const handleAccept = async () => {
+  if (!window.confirm("Approve this video for upload to YouTube?")) return;
+
+  try {
+    const result = await acceptVideoService(video.id);
+
+    if (result.success) {
+      alert("Video accepted and user notified ✅");
+      // You can trigger a UI refresh or set state here
+    } else {
+      alert("Failed to accept video: " + result.message);
+    }
+  } catch (err) {
+    console.error(err);
+    alert("Network error while accepting video");
+  }
+};
+
+
   const handleDelete = () => {
     if (
       window.confirm(
@@ -32,9 +54,6 @@ export default function VideoRow({ video, onDelete, deleting }) {
     }
   };
 
-  const handleAccept = () => {
-    alert("Accept feature - Under construction 🚧");
-  };
 
   const handleDecline = () => {
     alert("Decline feature - Under construction 🚧");

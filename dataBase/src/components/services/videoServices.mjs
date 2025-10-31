@@ -109,3 +109,29 @@ export async function updateVideoStatusService(id, status) {
     throw error;
   }
 }
+/**
+ * Accept a video by ID via API call
+ * Marks it as accepted and triggers email + promo code logic on the server.
+ */
+export async function acceptVideoService(id) {
+  try {
+    const response = await fetch(`${url}/api/upload/accept/${id}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw data; // Pass through API error details
+    }
+
+    return data; // { success, message, data }
+  } catch (error) {
+    console.error('Video accept API error:', error);
+    throw error;
+  }
+}
+
