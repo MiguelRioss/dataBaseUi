@@ -237,7 +237,7 @@ export default function Orders() {
       const trackingCode = String(row.track_url ?? "").trim();
       const normalizedTracking = trackingCode.toUpperCase();
       const hasTracking =
-        normalizedTracking.length > 0 && normalizedTracking.includes("RT");
+        normalizedTracking.length > 0 &&( normalizedTracking.includes("RT") || normalizedTracking.includes("RU"));
 
       if (!hasTracking) {
         setError("Add the RT tracking code before sending the shipping email.");
