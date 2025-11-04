@@ -446,7 +446,7 @@ export default function Orders() {
   }
   // ...inside Orders()
   const getPrice = React.useCallback((r) => {
-    const v = r?.amount /100;
+    const v = r?.amount / 100;
     if (typeof v === "number") return v;
     if (typeof v === "string") {
       const n = parseFloat(v.replace(/[^\d.-]/g, "")); // handles "€310.00"
@@ -642,10 +642,12 @@ export default function Orders() {
               })}
             />
 
-            {/* Total bar under the table */}
             <div className="mt-2 flex justify-end">
-              <div className="rounded-lg border border-[var(--line)] bg-white/70 px-3 py-2 text-sm font-semibold">
-                Total: {fmt.format(totalVisible)}
+              <div className="rounded-lg border border-[var(--line)] bg-white/70 px-10 py-2 text-base sm:text-lg">
+                <span className="font-medium">Total:</span>{" "}
+                <span className="text-3xl sm:text-4xl font-bold tracking-tight">
+                  {fmt.format(totalVisible)}
+                </span>
               </div>
             </div>
           </>

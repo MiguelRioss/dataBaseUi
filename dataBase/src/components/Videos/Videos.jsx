@@ -2,7 +2,7 @@
 import React from "react";
 import VideoRow from "./VideoRow";
 import SortableTh from "../Orders/commonFiles/toggleSort";
-import { getAllVideosService, deleteVideoByIdService } from "../services/videoServices.mjs";
+import { getAllVideosService } from "../services/videoServices.mjs";
 
 export default function Videos() {
   const [rows, setRows] = React.useState([]);
@@ -30,23 +30,6 @@ export default function Videos() {
     load();
   }, [load]);
 
-  // Delete video - FIXED: use deleteVideoByIdService instead of deleteVideoById
-  const handleDeleteVideo = React.useCallback(async (videoId) => {
-    if (!videoId) return;
-    
-    try {
-      setError("");
-      setDeletingId(videoId);
-      await deleteVideoByIdService(videoId); // ✅ Fixed this line
-      
-      // Remove from local state
-      setRows(prev => prev.filter(video => video.id !== videoId));
-    } catch (e) {
-      setError(e.message || String(e));
-    } finally {
-      setDeletingId(null);
-    }
-  }, []);
 
   // Sorting configuration
   const SORT_KEYS = {
@@ -195,8 +178,6 @@ export default function Videos() {
                   <VideoRow
                     key={video.id}
                     video={video}
-                    onDelete={handleDeleteVideo}
-                    deleting={deletingId === video.id}
                   />
                 ))}
               </tbody>
