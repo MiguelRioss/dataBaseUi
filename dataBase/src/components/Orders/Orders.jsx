@@ -237,7 +237,9 @@ export default function Orders() {
       const trackingCode = String(row.track_url ?? "").trim();
       const normalizedTracking = trackingCode.toUpperCase();
       const hasTracking =
-        normalizedTracking.length > 0 &&( normalizedTracking.includes("RT") || normalizedTracking.includes("RU"));
+        normalizedTracking.length > 0 &&
+        (normalizedTracking.includes("RT") ||
+          normalizedTracking.includes("RU"));
 
       if (!hasTracking) {
         setError("Add the RT tracking code before sending the shipping email.");
@@ -442,6 +444,28 @@ export default function Orders() {
       setBulkMoving(null);
     }
   }
+  // ...inside Orders()
+  const getPrice = React.useCallback((r) => {
+    const v = r?.amount /100;
+    if (typeof v === "number") return v;
+    if (typeof v === "string") {
+      const n = parseFloat(v.replace(/[^\d.-]/g, "")); // handles "€310.00"
+      return isNaN(n) ? 0 : n;
+    }
+    return 0;
+  }, []);
+
+  const fmt = React.useMemo(
+    () =>
+      new Intl.NumberFormat(undefined, { style: "currency", currency: "EUR" }),
+    []
+  );
+
+  // total of what you're actually showing (sortedRows)
+  const totalVisible = React.useMemo(
+    () => sortedRows.reduce((s, r) => s + getPrice(r), 0),
+    [sortedRows, getPrice]
+  );
 
   // ------- FOLDER SWITCH UI -------
   function FolderTabs() {
@@ -589,33 +613,42 @@ export default function Orders() {
             No orders match your search.
           </div>
         ) : (
-          <OrdersTable
-            rows={sortedRows}
-            sort={sort}
-            onToggleSort={handleSortToggle}
-            selectedIds={selectedIds}
-            onToggleRow={handleToggleRow}
-            allSelected={allSelected}
-            onToggleAll={handleToggleAll}
-            rowProps={(r) => ({
-              isEditing: editingId === r.id,
-              onEdit: () => setEditingId(r.id),
-              onCancelEdit: () => setEditingId(null),
-              onSaveTrackUrl: handleSaveTrackUrl,
-              saving: savingId === r.id,
-              sendingEmail: sendingEmailId === r.id,
-              sendingInvoice: sendingInvoiceId === r.id,
-              onUpdateStatus: handleUpdateStatus,
-              onToggleDelivered: handleToggleDelivered,
-              onSendEmail: handleSendEmail,
-              onOpenOrderEdit: handleOpenOrderEdit,
-              onTogglePaymentStatus: handleTogglePaymentStatus,
-              togglingPaymentStatus: updatingPaymentStatusId === r.id,
-              onSendInvoice: handleSendInvoice,
-              paymentStatus: r.payment_status,
-              emailSentThankYouAdmin: r.emailThankYouAdmin,
-            })}
-          />
+          <>
+            <OrdersTable
+              rows={sortedRows}
+              sort={sort}
+              onToggleSort={handleSortToggle}
+              selectedIds={selectedIds}
+              onToggleRow={handleToggleRow}
+              allSelected={allSelected}
+              onToggleAll={handleToggleAll}
+              rowProps={(r) => ({
+                isEditing: editingId === r.id,
+                onEdit: () => setEditingId(r.id),
+                onCancelEdit: () => setEditingId(null),
+                onSaveTrackUrl: handleSaveTrackUrl,
+                saving: savingId === r.id,
+                sendingEmail: sendingEmailId === r.id,
+                sendingInvoice: sendingInvoiceId === r.id,
+                onUpdateStatus: handleUpdateStatus,
+                onToggleDelivered: handleToggleDelivered,
+                onSendEmail: handleSendEmail,
+                onOpenOrderEdit: handleOpenOrderEdit,
+                onTogglePaymentStatus: handleTogglePaymentStatus,
+                togglingPaymentStatus: updatingPaymentStatusId === r.id,
+                onSendInvoice: handleSendInvoice,
+                paymentStatus: r.payment_status,
+                emailSentThankYouAdmin: r.emailThankYouAdmin,
+              })}
+            />
+
+            {/* Total bar under the table */}
+            <div className="mt-2 flex justify-end">
+              <div className="rounded-lg border border-[var(--line)] bg-white/70 px-3 py-2 text-sm font-semibold">
+                Total: {fmt.format(totalVisible)}
+              </div>
+            </div>
+          </>
         )}
       </div>
     </div>

@@ -70,6 +70,14 @@ h1{
   box-shadow: var(--shadow);
   overflow: hidden;
 }
+/* make sure the footer always renders and is visible */
+.card table tfoot { display: table-footer-group; }
+.card table tfoot td {
+  padding: 14px 16px;
+  border-top: 1px solid var(--line);
+  background: rgba(249,115,22,.06); /* subtle highlight */
+}
+.card table tfoot { outline: 2px solid red; }
 
 /* ---------- Table ---------- */
 table{width:100%; border-collapse: separate; border-spacing:0}
