@@ -1,7 +1,6 @@
 // components/VideoRow.jsx
 import React from "react";
-import { acceptVideoService, declineVideoService } from "../services/videoServices";
-
+import { acceptVideoService,declineVideoService } from "../services/videoServices.mjs";
 const DECLINE_REASONS = [
   "Poor audio/video quality",
   "Contains identifying or sensitive info",

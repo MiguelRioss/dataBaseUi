@@ -8,7 +8,6 @@ const PHONE_DIAL_OPTIONS = allCountries.map((country) => ({
 
 PHONE_DIAL_OPTIONS.sort((a, b) => a.label.localeCompare(b.label));
 
-
 const ADDRESS_FIELD_CONFIG = [
   { key: "name", label: "Contact Name" },
   { key: "line1", label: "Address Line 1" },
@@ -52,8 +51,7 @@ export default function NewOrderForm({
     typeof resolveAddressPhoneParts === "function"
       ? resolveAddressPhoneParts
       : (address = {}) => {
-          const source =
-            address && typeof address === "object" ? address : {};
+          const source = address && typeof address === "object" ? address : {};
           const rawPrefix =
             typeof source.phone_prefix === "string"
               ? source.phone_prefix.trim()
@@ -89,6 +87,21 @@ export default function NewOrderForm({
 
   const safeDialCode = form.phonePrefix || defaultDialCode;
   const safePhoneNumber = form.phoneNumber || "";
+
+  // live totals preview (EUR in UI)
+  const num = (v) => (v == null || v === "" ? 0 : Number(v));
+  const itemsGross = (Array.isArray(form.items) ? form.items : []).reduce(
+    (s, it) => s + num(it.unit_amount) * num(it.quantity),
+    0
+  );
+  const shipping = num(form.shipping_cost);
+  const rawDiscount = num(form.discount_value);
+  const discountCalc =
+    form.discount_type === "percent"
+      ? itemsGross * (rawDiscount / 100)
+      : rawDiscount;
+  const discountClamped = Math.min(Math.max(discountCalc, 0), itemsGross);
+  const net = Math.max(0, itemsGross + shipping - discountClamped);
 
   return (
     <>
@@ -140,6 +153,7 @@ export default function NewOrderForm({
                 value={form.currency}
                 onChange={(e) => onFieldChange("currency", e.target.value)}
               />
+
               <label className="new-order-field new-order-field--full">
                 <span className="new-order-label">Shipment (EUR)</span>
                 <input
@@ -151,16 +165,57 @@ export default function NewOrderForm({
                   onChange={(e) => onShippingCostChange(e.target.value)}
                 />
               </label>
-              <Input
-                label="Total (EUR)"
-                type="number"
-                min="0"
-                step="0.01"
-                value={form.amount_total}
-                onChange={(e) =>
-                  onFieldChange("amount_total", e.target.value)
-                }
-              />
+
+              {/* Discount block */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 new-order-field new-order-field--full">
+                <label className="block">
+                  <span className="new-order-label">Discount code</span>
+                  <input
+                    type="text"
+                    className="new-order-input w-full"
+                    value={form.discount_code}
+                    onChange={(e) =>
+                      onFieldChange(
+                        "discount_code",
+                        e.target.value.toUpperCase()
+                      )
+                    }
+                    placeholder="WELCOME10"
+                  />
+                </label>
+                <label className="block">
+                  <span className="new-order-label">Discount type</span>
+                  <select
+                    className="new-order-input w-full"
+                    value={form.discount_type}
+                    onChange={(e) =>
+                      onFieldChange("discount_type", e.target.value)
+                    }
+                  >
+                    <option value="percent">% off</option>
+                    <option value="fixed">€ off</option>
+                  </select>
+                </label>
+                <label className="block">
+                  <span className="new-order-label">
+                    {form.discount_type === "percent"
+                      ? "Percent (%)"
+                      : "Amount (€)"}
+                  </span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    className="new-order-input w-full"
+                    value={form.discount_value}
+                    onChange={(e) =>
+                      onFieldChange("discount_value", e.target.value)
+                    }
+                  />
+                </label>
+              </div>
+
+              {/* Payment */}
               <div className="new-order-field new-order-field--full">
                 <span className="new-order-label">Payment Method</span>
                 <div className="flex flex-wrap gap-3">
@@ -188,8 +243,31 @@ export default function NewOrderForm({
                   />
                 </label>
               </div>
+
+              {/* Computed totals preview */}
+              <div className="new-order-field new-order-field--full">
+                <div className="rounded-lg border border-[var(--line)] bg-white/10 p-3 space-y-1">
+                  <div className="flex justify-between text-sm">
+                    <span>Items gross</span>
+                    <span>€{itemsGross.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>Shipping</span>
+                    <span>€{shipping.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>Discount</span>
+                    <span>−€{discountClamped.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-base font-semibold pt-1 border-t border-[var(--line)]">
+                    <span>Net total</span>
+                    <span>€{net.toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
             </div>
           </Section>
+
           <Section title="Items">
             {productsLoading && (
               <div className="new-order-hint">Loading products...</div>
@@ -228,7 +306,9 @@ export default function NewOrderForm({
                               (p) => p.id === item.id
                             );
                             if (!product) return "Product not found";
-                            return `Stock: ${product.stockValue ?? 0} | Price: ${
+                            return `Stock: ${
+                              product.stockValue ?? 0
+                            } | Price: ${
                               product.priceInCents != null
                                 ? formatPrice(product.priceInCents)
                                 : "N/A"
@@ -254,7 +334,10 @@ export default function NewOrderForm({
                     step="0.01"
                     value={item.unit_amount}
                     onChange={(e) =>
-                      onFieldChange(`items.${index}.unit_amount`, e.target.value)
+                      onFieldChange(
+                        `items.${index}.unit_amount`,
+                        e.target.value
+                      )
                     }
                   />
                 </div>
@@ -355,69 +438,71 @@ export default function NewOrderForm({
 
               {!sameAsShipping && (
                 <div className="new-order-grid">
-                  {ADDRESS_FIELD_CONFIG.map(({ key, label, type, optional }) => {
-                    if (key === "phone") {
-                      const { dialCode, number } = safeResolvePhone(
-                        form.billing_address
-                      );
+                  {ADDRESS_FIELD_CONFIG.map(
+                    ({ key, label, type, optional }) => {
+                      if (key === "phone") {
+                        const { dialCode, number } = safeResolvePhone(
+                          form.billing_address
+                        );
+                        return (
+                          <AddressPhoneField
+                            key="billing-phone"
+                            label={optional ? `${label} (optional)` : label}
+                            dialCode={dialCode}
+                            number={number}
+                            onDialCodeChange={(prefix) => {
+                              const parts = safeResolvePhone(
+                                form.billing_address
+                              );
+                              onFieldChange(
+                                "billing_address.phone_prefix",
+                                prefix
+                              );
+                              onFieldChange(
+                                "billing_address.phone_number",
+                                parts.number
+                              );
+                              onFieldChange(
+                                "billing_address.phone",
+                                `${prefix} ${parts.number}`.trim()
+                              );
+                            }}
+                            onNumberChange={(nextNumber) => {
+                              const { dialCode: prefix } = safeResolvePhone(
+                                form.billing_address
+                              );
+                              onFieldChange(
+                                "billing_address.phone_prefix",
+                                prefix
+                              );
+                              onFieldChange(
+                                "billing_address.phone_number",
+                                nextNumber
+                              );
+                              onFieldChange(
+                                "billing_address.phone",
+                                `${prefix} ${nextNumber}`.trim()
+                              );
+                            }}
+                          />
+                        );
+                      }
                       return (
-                        <AddressPhoneField
-                          key="billing-phone"
+                        <Input
+                          key={key}
                           label={optional ? `${label} (optional)` : label}
-                          dialCode={dialCode}
-                          number={number}
-                          onDialCodeChange={(prefix) => {
-                            const parts = safeResolvePhone(
-                              form.billing_address
-                            );
+                          type={type}
+                          value={form.billing_address[key]}
+                          onChange={(e) =>
                             onFieldChange(
-                              "billing_address.phone_prefix",
-                              prefix
-                            );
-                            onFieldChange(
-                              "billing_address.phone_number",
-                              parts.number
-                            );
-                            onFieldChange(
-                              "billing_address.phone",
-                              `${prefix} ${parts.number}`.trim()
-                            );
-                          }}
-                          onNumberChange={(nextNumber) => {
-                            const { dialCode: prefix } = safeResolvePhone(
-                              form.billing_address
-                            );
-                            onFieldChange(
-                              "billing_address.phone_prefix",
-                              prefix
-                            );
-                            onFieldChange(
-                              "billing_address.phone_number",
-                              nextNumber
-                            );
-                            onFieldChange(
-                              "billing_address.phone",
-                              `${prefix} ${nextNumber}`.trim()
-                            );
-                          }}
+                              `billing_address.${key}`,
+                              e.target.value
+                            )
+                          }
                         />
                       );
                     }
-                    return (
-                      <Input
-                        key={key}
-                        label={optional ? `${label} (optional)` : label}
-                        type={type}
-                        value={form.billing_address[key]}
-                        onChange={(e) =>
-                          onFieldChange(
-                            `billing_address.${key}`,
-                            e.target.value
-                          )
-                        }
-                      />
-                    );
-                  })}
+                  )}
                 </div>
               )}
             </div>

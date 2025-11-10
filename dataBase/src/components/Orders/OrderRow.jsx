@@ -67,11 +67,15 @@ export default function OrderRow({
       <td className="muted">{row.email}</td>
       <td>
         <ProductsPopup
-          shippingCost={row.shippingCost}
           items={row.items}
-          currency={row.currency || "eur"}
-          buttonText="View products"
-          title="Order products"
+          shippingCost={row.metadata?.shipping_cost_cents}
+          discount={
+            row.metadata?.discount ?? {
+              amount_cents: row.discount_cents,
+              code: row.discount_code,
+            }
+          }
+          currency={row.currency}
         />
       </td>
       <td>

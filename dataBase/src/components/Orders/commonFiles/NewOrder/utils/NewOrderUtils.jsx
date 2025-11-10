@@ -163,13 +163,9 @@ export const resolveAddressPhoneParts = (address = {}) => {
   }
 
   const rawPrefix =
-    typeof address.phone_prefix === "string"
-      ? address.phone_prefix.trim()
-      : "";
+    typeof address.phone_prefix === "string" ? address.phone_prefix.trim() : "";
   const rawNumber =
-    typeof address.phone_number === "string"
-      ? address.phone_number.trim()
-      : "";
+    typeof address.phone_number === "string" ? address.phone_number.trim() : "";
 
   if (rawPrefix && rawNumber) {
     return { dialCode: rawPrefix, number: rawNumber };
@@ -188,8 +184,7 @@ export const resolveAddressPhoneParts = (address = {}) => {
  * - Builds combined `phone` string
  */
 export const normalizeAddressPhone = (address = {}) => {
-  const base =
-    address && typeof address === "object" ? { ...address } : {};
+  const base = address && typeof address === "object" ? { ...address } : {};
   const { dialCode, number } = resolveAddressPhoneParts(base);
   const trimmedDial = dialCode || DEFAULT_DIAL_CODE;
   const trimmedNumber = (number || "").trim();
@@ -225,4 +220,8 @@ export const createInitialForm = () => ({
   shipping_address: createEmptyAddress(),
   billing_address: createEmptyAddress(),
   items: [createEmptyItem()],
+  // NEW: discount controls (UI level)
+  discount_code: "",
+  discount_type: "percent", // "percent" | "fixed"
+  discount_value: "", // number-like string
 });
