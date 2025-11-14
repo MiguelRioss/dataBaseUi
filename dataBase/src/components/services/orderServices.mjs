@@ -102,6 +102,14 @@ export async function updateShippingEmailStatus(orderId, value = true) {
   // Reuse patchOrder to persist only the flag
   return patchOrder(orderId, { sentShippingEmail: value });
 }
+export async function updateInvoiceEmailStatus(orderId, value = true) {
+  if (!orderId) throw new Error("Missing orderId for updateInvoiceEmailStatus.");
+
+  console.log("[orderServices] Updating email_Sent_ThankYou_Admin:", { orderId, value });
+
+  // Reuse patchOrder to persist only the flag
+  return patchOrder(orderId, { email_Sent_ThankYou_Admin: value });
+}
 
 export async function updateOrderStatus(orderId, flatPatch = {}) {
   if (!orderId) throw new Error("Missing orderId for updateOrderStatus.");

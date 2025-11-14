@@ -9,6 +9,7 @@ import {
   updateTrackUrl,
   updatePaymentStatus,
   updateShippingEmailStatus,
+  updateInvoiceEmailStatus,
 } from "../services/orderServices.mjs";
 import { patchAllOrderFlags } from "../services/cttPatch";
 import NewOrderPopup from "./commonFiles/NewOrder/NewOrderPopUp";
@@ -326,6 +327,15 @@ export default function Orders() {
           invoiceId,
           live: true,
         });
+        await updateInvoiceEmailStatus(row.id, true);
+
+        setRows((prev) =>
+          prev.map((existing) =>
+            existing.id === row.id
+              ? { ...existing, emailThankYouAdmin: true }
+              : existing
+          )
+        );
       } catch (err) {
         setError(err?.message || "Failed to send invoice email.");
       } finally {
