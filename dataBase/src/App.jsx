@@ -9,6 +9,7 @@ import "./App.css";
 import Inventory from "./components/Inventory/Inventory";
 import PromotionCodes from "./components/Promotions/PromotionCodes";
 import Videos from "./components/Videos/Videos";
+import BlogDocxUploadPanel from "./components/Blogs/BlogDocxUploadPanel";
 
 export default function App() {
   const [user, setUser] = React.useState(null);
@@ -79,6 +80,7 @@ export default function App() {
         {selectedView === "videos" && <Videos />}
         {selectedView === "Inventory" && <Inventory />}
         {selectedView === "promotions" && <PromotionCodes />}
+        {selectedView === "blog" && <BlogDocxUploadPanel />}
       </div>
     </div>
   );

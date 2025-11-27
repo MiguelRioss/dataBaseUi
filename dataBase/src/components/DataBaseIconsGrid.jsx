@@ -1,5 +1,3 @@
-// src/components/DataBaseIconsGrid.jsx
-import React from "react";
 import PropTypes from "prop-types";
 
 /**
@@ -45,6 +43,57 @@ export default function DataBaseIconsGrid({ selected, onSelect }) {
             strokeWidth="1.3"
             strokeLinecap="round"
             strokeLinejoin="round"
+          />
+        </svg>
+      ),
+    },
+    {
+      key: "blog",
+      title: "Blog & Content",
+      subtitle: "Write and edit articles",
+      icon: (
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden>
+          {/* Left page */}
+          <path
+            d="M5 5.5C5 4.67 5.67 4 6.5 4H11v13.5L8.75 16.5 6.5 17.5C5.67 17.5 5 16.83 5 16V5.5Z"
+            stroke="currentColor"
+            strokeWidth="1.3"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          {/* Right page */}
+          <path
+            d="M19 5.5C19 4.67 18.33 4 17.5 4H13v13.5l2.25-1.5 2.25 1c.83 0 1.5-.67 1.5-1.5V5.5Z"
+            stroke="currentColor"
+            strokeWidth="1.3"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          {/* Heading line */}
+          <path
+            d="M7.5 7.5H10"
+            stroke="currentColor"
+            strokeWidth="1.3"
+            strokeLinecap="round"
+          />
+          {/* Text lines */}
+          <path
+            d="M7.5 9.5H10"
+            stroke="currentColor"
+            strokeWidth="1.3"
+            strokeLinecap="round"
+          />
+          <path
+            d="M14 7.5h2.5"
+            stroke="currentColor"
+            strokeWidth="1.3"
+            strokeLinecap="round"
+          />
+          <path
+            d="M14 9.5h2.5"
+            stroke="currentColor"
+            strokeWidth="1.3"
+            strokeLinecap="round"
           />
         </svg>
       ),

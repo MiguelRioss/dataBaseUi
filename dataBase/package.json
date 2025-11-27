@@ -12,7 +12,9 @@
   "dependencies": {
     "country-telephone-data": "^0.6.3",
     "firebase": "^12.2.1",
+    "jsdom": "^27.2.0",
     "lucide-react": "^0.544.0",
+    "mammoth": "^1.11.0",
     "prop-types": "^15.8.1",
     "puppeteer": "^24.20.0",
     "react": "^19.1.1",
