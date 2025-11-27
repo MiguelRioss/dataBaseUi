@@ -2,10 +2,12 @@
 import React from "react";
 import PropTypes from "prop-types";
 
-export default function BlogDocxUploadPanel({ onFilesSelected }) {
+export default function BlogDocxUploadPanel({ onFilesSelected, onSubmit }) {
   const [files, setFiles] = React.useState([]);
   const [isDragging, setIsDragging] = React.useState(false);
   const [error, setError] = React.useState("");
+  const [success, setSuccess] = React.useState("");
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   const handleFiles = (fileList) => {
     const arr = Array.from(fileList || []);
@@ -13,11 +15,14 @@ export default function BlogDocxUploadPanel({ onFilesSelected }) {
 
     if (!docx.length) {
       setError("Please upload .docx Word files only.");
+      setSuccess("");
       return;
     }
 
     setError("");
+    setSuccess("");
     setFiles(docx);
+
     if (typeof onFilesSelected === "function") {
       onFilesSelected(docx);
     }
@@ -45,6 +50,34 @@ export default function BlogDocxUploadPanel({ onFilesSelected }) {
   const onInputChange = (e) => {
     handleFiles(e.target.files);
     e.target.value = "";
+  };
+
+  const handleSubmit = async () => {
+    if (!files.length) return;
+    if (typeof onSubmit !== "function") {
+      console.warn(
+        "[BlogDocxUploadPanel] onSubmit not provided. TODO: wire backend convert+save here."
+      );
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      setError("");
+      setSuccess("");
+
+      await onSubmit(files); // <- parent will convert DOCX → JSON + save to DB
+
+      setSuccess("Blogs converted and saved successfully.");
+      setFiles([]);
+    } catch (err) {
+      console.error(err);
+      setError(
+        err?.message || "Failed to convert and save blog posts. Please try again."
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -115,21 +148,35 @@ export default function BlogDocxUploadPanel({ onFilesSelected }) {
       </div>
 
       {error && <p className="blog-upload__error">{error}</p>}
+      {success && <p className="blog-upload__success">{success}</p>}
 
       {files.length > 0 && (
-        <div className="blog-upload__list">
-          <h3>Files ready to convert</h3>
-          <ul>
-            {files.map((f) => (
-              <li key={f.name}>
-                <span className="blog-upload__file-name">{f.name}</span>
-                <span className="blog-upload__file-size">
-                  {(f.size / 1024).toFixed(1)} KB
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
+        <>
+          <div className="blog-upload__list">
+            <h3>Files ready to convert</h3>
+            <ul>
+              {files.map((f) => (
+                <li key={f.name}>
+                  <span className="blog-upload__file-name">{f.name}</span>
+                  <span className="blog-upload__file-size">
+                    {(f.size / 1024).toFixed(1)} KB
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div className="blog-upload__actions">
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={handleSubmit}
+              disabled={isSubmitting || !files.length}
+            >
+              {isSubmitting ? "Converting…" : "Convert & Save to Blog"}
+            </button>
+          </div>
+        </>
       )}
     </section>
   );
@@ -137,4 +184,6 @@ export default function BlogDocxUploadPanel({ onFilesSelected }) {
 
 BlogDocxUploadPanel.propTypes = {
   onFilesSelected: PropTypes.func,
+  // async (File[]) => Promise<void>
+  onSubmit: PropTypes.func,
 };
