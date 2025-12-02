@@ -1,6 +1,7 @@
 // src/components/Blogs/BlogPage.jsx
 import BlogDocxUploadPanel from "./BlogDocxUploadPanel";
 import BlogAdminList from "./BlogAdminList";
+import { API_BASE } from "../services/apiBase";
 
 export default function BlogPage() {
   const handleSubmitDocx = async (files) => {
@@ -12,11 +13,11 @@ export default function BlogPage() {
     // TODO: you’ll build a /api/blogs/import endpoint that:
     // - runs buildFullBlogFromDocx
     // - calls addBlogJsonObject(jsonBlogObject)
-    const res = await fetch("/api/blogs/import", {
+    const res = await fetch(`${API_BASE}/api/blogs/import-docx`, {
       method: "POST",
       body: formData,
     });
-
+    
     if (!res.ok) {
       const text = await res.text();
       throw new Error(text || "Failed to import blogs");
