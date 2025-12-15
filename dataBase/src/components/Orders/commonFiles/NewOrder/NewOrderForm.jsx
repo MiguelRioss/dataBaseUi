@@ -1,7 +1,8 @@
 import { allCountries } from "country-telephone-data";
 
 const PHONE_DIAL_OPTIONS = allCountries.map((country) => ({
-  value: `+${country.dialCode}`,
+  value: `${country.iso2}|+${country.dialCode}`, // ✅ unique
+  dial: `+${country.dialCode}`,
   label: `${country.name} (+${country.dialCode})`,
   iso2: country.iso2,
 }));
@@ -102,7 +103,11 @@ export default function NewOrderForm({
       : rawDiscount;
   const discountClamped = Math.min(Math.max(discountCalc, 0), itemsGross);
   const net = Math.max(0, itemsGross + shipping - discountClamped);
-
+  const selectedPhoneKey =
+    form.phonePrefixKey ||
+    `$
+                  {form.phoneIso2 || "GB"}|$
+                  {form.phonePrefix || defaultDialCode}`;
   return (
     <>
       <div className="new-order-layout text-sm grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -125,10 +130,13 @@ export default function NewOrderForm({
                 <div className="flex items-center gap-2">
                   <select
                     className="new-order-input w-24"
-                    value={safeDialCode}
-                    onChange={(e) =>
-                      onCustomerPhonePrefixChange?.(e.target.value)
-                    }
+                    value={selectedPhoneKey}
+                    onChange={(e) => {
+                      const [iso2, dial] = e.target.value.split("|");
+                      onFieldChange?.("phoneIso2", iso2);
+                      onFieldChange?.("phonePrefixKey", e.target.value); // store the unique key
+                      onCustomerPhonePrefixChange?.(dial); // keep your existing handler
+                    }}
                   >
                     {PHONE_DIAL_OPTIONS.map(({ value, label }) => (
                       <option key={value} value={value}>
@@ -563,7 +571,10 @@ function AddressPhoneField({
   onDialCodeChange,
   onNumberChange,
 }) {
-  const safeDial = dialCode || PHONE_DIAL_OPTIONS[0]?.value || "";
+  const dialKey =
+    PHONE_DIAL_OPTIONS.find((o) => o.dial === dialCode)?.value ||
+    PHONE_DIAL_OPTIONS[0]?.value ||
+    "";
   const safeNumber = number || "";
   return (
     <label className="new-order-field">
@@ -571,8 +582,11 @@ function AddressPhoneField({
       <div className="flex items-center gap-2">
         <select
           className="new-order-input w-24"
-          value={safeDial}
-          onChange={(e) => onDialCodeChange?.(e.target.value)}
+          value={dialKey}
+          onChange={(e) => {
+            const [, dial] = e.target.value.split("|");
+            onDialCodeChange?.(dial);
+          }}
         >
           {PHONE_DIAL_OPTIONS.map(({ value, label: optionLabel }) => (
             <option key={value} value={value}>
