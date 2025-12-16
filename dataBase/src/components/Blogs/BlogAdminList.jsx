@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { API_BASE, resolveApiBase } from "../services/apiBase";
+import { API_BASE } from "../services/apiBase";
 
 export default function BlogAdminList() {
   const [blogs, setBlogs] = useState([]);
@@ -34,7 +34,7 @@ export default function BlogAdminList() {
 
     try {
       setDeleting(slug);
-      const res = await fetch(`/api/blogs/${slug}`, {
+      const res = await fetch(`${API_BASE}/api/blogs/${slug}`, {
         method: "DELETE",
       });
       if (!res.ok) throw new Error(`Delete failed (${res.status})`);
