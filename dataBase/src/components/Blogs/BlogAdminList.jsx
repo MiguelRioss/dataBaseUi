@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { API_BASE } from "../services/apiBase";
+import EditDateButton from "./EditDateButton.jsx";
 
 export default function BlogAdminList() {
   const [blogs, setBlogs] = useState([]);
@@ -81,11 +82,11 @@ export default function BlogAdminList() {
               >
                 <td className="py-3 px-4">{b.title || "(Untitled)"}</td>
                 <td className="py-3 px-4 text-neutral-500">{b.id}</td>
-                <td className="py-3 px-4">
+                <td className="py-3 px-4 flex items-center gap-2">
                   <button
                     onClick={() => handleDelete(b.id)}
                     disabled={deleting === b.id}
-                    className={`px-3 py-1.5 rounded-md text-sm font-medium ${
+                    className={` btn px-3 py-1.5 rounded-md text-sm font-medium ${
                       deleting === b.id
                         ? "bg-neutral-300 text-neutral-700 cursor-not-allowed"
                         : "bg-red-100 text-red-700 hover:bg-red-200"
@@ -93,6 +94,17 @@ export default function BlogAdminList() {
                   >
                     {deleting === b.id ? "Deleting..." : "Delete"}
                   </button>
+
+                  <EditDateButton
+                    slug={b.id}
+                    onUpdated={(updatedBlog) => {
+                      setBlogs((prev) =>
+                        prev.map((blog) =>
+                          blog.id === b.id ? { ...blog, ...updatedBlog } : blog
+                        )
+                      );
+                    }}
+                  />
                 </td>
               </tr>
             ))}
