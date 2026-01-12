@@ -91,7 +91,7 @@ export function toggleSort(prev, key) {
   return { key, dir: defaultDir };
 }
 
-const TRACKING_PREFIXES = ["RT", "RU", "LA", "LL", "RL"];
+export const TRACKING_PREFIXES = ["RT", "RU", "LA", "LL", "RL"];
 
 export function hasAllowedTrackingCode(value) {
   const normalized = String(value ?? "").trim().toUpperCase();

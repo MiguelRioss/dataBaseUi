@@ -23,6 +23,7 @@ import {
   buildDeliveredPatch,
   filterRows,
   hasAllowedTrackingCode,
+  TRACKING_PREFIXES,
   sortRows,
   toggleSort,
 } from "./commonFiles/orderUtils.js";
@@ -376,7 +377,7 @@ export default function Orders() {
   const logThenPatchOrders = React.useCallback(async () => {
     setScanLoading(true);
     try {
-      await patchAllOrderFlags();
+      await patchAllOrderFlags({ trackingPrefixes: TRACKING_PREFIXES });
       await load();
     } catch (e) {
       setError(e.message);
