@@ -23,7 +23,7 @@ export default function TrackEditor({ initial = "", onCancel, onSave, saving }) 
         className="input"
         value={value}
         onChange={handleChange}
-        placeholder="RT..."
+        placeholder="RT/RU/LA/LL/RL..."
         style={{ minWidth: 260 }}
       />
       <button className="btn btn--primary" onClick={handleSave} disabled={saving}>

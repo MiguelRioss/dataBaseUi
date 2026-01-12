@@ -22,6 +22,7 @@ import {
   buildNextStatusSteps,
   buildDeliveredPatch,
   filterRows,
+  hasAllowedTrackingCode,
   sortRows,
   toggleSort,
 } from "./commonFiles/orderUtils.js";
@@ -236,14 +237,12 @@ export default function Orders() {
     async (row) => {
       if (!row) return;
       const trackingCode = String(row.track_url ?? "").trim();
-      const normalizedTracking = trackingCode.toUpperCase();
-      const hasTracking =
-        normalizedTracking.length > 0 &&
-        (normalizedTracking.includes("RT") ||
-          normalizedTracking.includes("RU"));
+      const hasTracking = hasAllowedTrackingCode(trackingCode);
 
       if (!hasTracking) {
-        setError("Add the RT tracking code before sending the shipping email.");
+        setError(
+          "Add a tracking code starting with RT, RU, LA, LL, or RL before sending the shipping email."
+        );
         return;
       }
       if (!row.email) {

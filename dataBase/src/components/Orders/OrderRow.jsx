@@ -4,6 +4,7 @@ import StatusPopUp from "./commonFiles/Status/StatusPopUp";
 import { centsToEUR, buildCttUrl } from "./commonFiles/PopUp/utils/utils";
 import ProductsPopup from "./commonFiles/PopUp/ProductsPopup";
 import StatusBadge from "./commonFiles/StatusBadge";
+import { hasAllowedTrackingCode } from "./commonFiles/orderUtils.js";
 export default function OrderRow({
   row,
   isEditing,
@@ -25,11 +26,7 @@ export default function OrderRow({
 }) {
   const deliveredOk = !!row?.status?.delivered?.status;
   const trackingCode = String(row?.track_url ?? "").trim();
-  const normalizedTrackingCode = trackingCode.toUpperCase();
-  const hasTrackingCode =
-    normalizedTrackingCode.length > 0 &&
-    (normalizedTrackingCode.includes("RT") ||
-      normalizedTrackingCode.includes("RU"));
+  const hasTrackingCode = hasAllowedTrackingCode(trackingCode);
 
   const emailAlreadySent = row.sentShippingEmail || row.email_sent;
   const emailButtonDisabled = sendingEmail || !hasTrackingCode;

@@ -90,3 +90,13 @@ export function toggleSort(prev, key) {
     : "asc";
   return { key, dir: defaultDir };
 }
+
+const TRACKING_PREFIXES = ["RT", "RU", "LA", "LL", "RL"];
+
+export function hasAllowedTrackingCode(value) {
+  const normalized = String(value ?? "").trim().toUpperCase();
+  if (!normalized) return false;
+  const prefixes = TRACKING_PREFIXES.join("|");
+  const pattern = new RegExp(`(?:^|[^A-Z0-9])(?:${prefixes})(?=$|\\d|[^A-Z0-9])`);
+  return pattern.test(normalized);
+}
